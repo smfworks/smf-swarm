@@ -1,0 +1,62 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "smf-swarm"
+version = "1.0.0"
+description = "LangGraph + CrewAI + MiroFish Hybrid Predictive Pipeline for agent-powered predictive analysis"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.10"
+authors = [
+    {name = "SMF Works", email = "michael@smfworks.com"},
+]
+keywords = ["prediction", "llm", "agents", "forecasting", "swarm", "langgraph", "crewai", "mirofish"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Intended Audience :: Financial and Insurance Industry",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Office/Business :: Financial",
+]
+
+dependencies = [
+    "langgraph>=0.3.0",
+    "langchain-openai>=0.3.0",
+    "langchain-core>=0.3.0",
+    "crewai>=0.117",
+    "requests>=2.31.0",
+    "python-dotenv>=1.0.0",
+]
+
+[project.scripts]
+smf-swarm = "smf_swarm.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/smfworks/smf-swarm"
+Documentation = "https://github.com/smfworks/smf-swarm/tree/main/docs"
+Repository = "https://github.com/smfworks/smf-swarm"
+Issues = "https://github.com/smfworks/smf-swarm/issues"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/smf_swarm"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "/src",
+    "/tests",
+    "/docs",
+    "/examples",
+    "/scripts",
+    "/README.md",
+    "/LICENSE",
+    "/CHANGELOG.md",
+]
