@@ -1,4 +1,4 @@
-"""SMF Swarm — MiroFish-Style Social Simulator.
+"""SMF Swarm — Social Swarm Simulator.
 
 Agent swarm that debates a prediction topic and generates:
   - Sentiment trajectory across rounds

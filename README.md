@@ -1,6 +1,6 @@
 # SMF Swarm 🎯
 
-**LangGraph + CrewAI + MiroFish Hybrid Predictive Pipeline**
+**LangGraph + CrewAI + Social Swarm Hybrid Predictive Pipeline**
 
 Predict the future with agent swarms. SMF Swarm runs three prediction modes
 — Standard, Debate, and Full+Social — powered by any LLM you choose
@@ -16,7 +16,7 @@ Built by [SMF Works](https://smfworks.com). MIT licensed. Open source.
 |---------|-------------|
 | **Standard Mode** | Fast single-model prediction. Gather data, engineer features, model, validate, report. |
 | **Debate Mode** | Adversarial ensemble — Optimist vs Skeptic vs Analyst, with opening arguments and rebuttals. |
-| **Full + Social** | Standard + Debate → merge → MiroFish social validation (agent swarm calibration). |
+| **Full + Social** | Standard + Debate → merge → social swarm validation (agent swarm calibration). |
 | **Any LLM Provider** | Ollama, OpenAI, Anthropic, Groq, Together, or any OpenAI-compat API. Swap models in one command. |
 | **Health Monitoring** | Per-node tracking: duration, errors, success rate. |
 | **Structured Output** | JSON output with confidence, summary, risk assessment, and timestamps. |

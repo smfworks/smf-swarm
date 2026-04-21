@@ -1,4 +1,4 @@
-"""SMF Swarm — LangGraph + CrewAI + MiroFish Hybrid Predictive Pipeline.
+"""SMF Swarm — LangGraph + CrewAI + Social Swarm Hybrid Predictive Pipeline.
 
 Predict the future with agent swarms. Run three modes — Standard, Debate, and
 Full+Social — seeded with any LLM provider you choose (local or cloud).

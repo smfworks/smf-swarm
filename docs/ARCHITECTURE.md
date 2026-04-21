@@ -25,7 +25,7 @@ calibration signal rather than a raw forecast.
 
 ```
 ┌──────────────┬──────────────┬──────────────┬──────────────┐
-│   Standard   │    Debate    │  Full+Social │ MiroFish     │
+│   Standard   │    Debate    │  Full+Social │ Social Swarm │
 │              │              │              │ Standalone   │
 ├──────────────┼──────────────┼──────────────┼──────────────┤
 │ Gather       │ Gather       │ Gather       │              │
@@ -118,7 +118,7 @@ User Query
         └──────────────────────────────────────┘
                │
                ▼
-        Social Simulation (MiroFish)
+        Social Simulation Swarm
                │
           ┌────┴──────────────────────────────┐
           ▼                                   ▼
@@ -162,7 +162,7 @@ smf_swarm/
 │   └── engine.py        # 3-agent debate: openings, rebuttals, judge, dissent
 │                          DebateEngine class, prompt templates, confidence extraction
 ├── social/
-│   └── simulator.py     # MiroFish social simulation: personas, actions, sentiment,
+│   └── simulator.py     # Social swarm simulation: personas, actions, sentiment,
 │                        knowledge graph, report generation
 └── monitor/
     └── __init__.py      # SwarmMonitor: node timing, error tracking, health_score
