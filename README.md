@@ -8,6 +8,8 @@ Predict the future with agent swarms. SMF Swarm runs three prediction modes
 
 Built by [SMF Works](https://smfworks.com). MIT licensed. Open source.
 
+**👤 Who is this for?** SMF Swarm is a developer/engineer tool. You interact with it via the command line or Python API. If you want a conversational, no-code experience, see [SMF Predict](https://smfworks.com/predict) — a commercial product that bundles SMF Swarm with a pre-configured Hermes Agent (or any OpenClaw-compatible agent) so you can type natural-language questions and get polished forecast reports back.
+
 ---
 
 ## ✨ Features
@@ -233,6 +235,38 @@ smf-swarm test
 | Email | michael@smfworks.com |
 | X / Twitter | [@michaelgannotti](https://x.com/michaelgannotti) |
 | GitHub Issues | [smfworks/smf-swarm/issues](https://github.com/smfworks/smf-swarm/issues) |
+
+---
+
+## 🤖 Agent Integration
+
+Want to use SMF Swarm from a conversational agent? You can hook it into an existing **Hermes Agent** or **OpenClaw Agent** in two ways:
+
+### Option 1: In-process import (fastest)
+Your agent runs in Python and calls the Swarm directly:
+
+```python
+from smf_swarm import Pipeline
+
+pipeline = Pipeline()
+result = pipeline.run(
+    query="Will NVIDIA exceed $4T by July 2026?",
+    mode="debate",
+    domain="financial"
+)
+# Feed result.confidence, result.summary back to your agent
+```
+
+### Option 2: Subprocess call (isolated)
+Shell out from any language:
+
+```bash
+smf-swarm predict "Will AI adoption exceed 60%?" --mode full --domain technology --output result.json
+```
+
+Your agent reads `result.json` and presents it to the user.
+
+For a turnkey, pre-integrated solution with license management and automated research, see [SMF Predict](https://smfworks.com/predict).
 
 ---
 
