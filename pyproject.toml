@@ -35,6 +35,9 @@ dependencies = [
     "crewai>=0.117",
     "requests>=2.31.0",
     "python-dotenv>=1.0.0",
+    "flask>=3.0.0",
+    "flask-cors>=4.0.0",
+    "PyPDF2>=3.0.0",
 ]
 
 [project.scripts]

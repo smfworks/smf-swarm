@@ -60,6 +60,11 @@ Examples:
     # ── config ───────────────────────────────────
     sub.add_parser("config", help="Show current configuration")
 
+    # ── web ───────────────────────────────────────
+    p_web = sub.add_parser("web", help="Launch the web UI server")
+    p_web.add_argument("--port", type=int, default=8080, help="Port to bind (default: 8080)")
+    p_web.add_argument("--host", type=str, default="127.0.0.1", help="Host to bind (default: 127.0.0.1)")
+
     args = parser.parse_args(argv)
     if not args.cmd:
         parser.print_help()
@@ -76,6 +81,8 @@ Examples:
         _cmd_version()
     elif args.cmd == "config":
         _cmd_config()
+    elif args.cmd == "web":
+        _cmd_web(args)
 
 
 def _cmd_configure():
@@ -176,3 +183,8 @@ def _cmd_config():
     print(f"\nConfig file: {DEFAULT_CONFIG_FILE}")
     print(f"{'='*60}")
     print(json.dumps(cfg.__dict__, indent=2, default=str))
+
+
+def _cmd_web(args):
+    from smf_swarm.web.app import run_server
+    run_server(host=args.host, port=args.port)

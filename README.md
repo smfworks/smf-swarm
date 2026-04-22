@@ -130,6 +130,42 @@ Output:
 
 ---
 
+## 🌐 Web UI (v1.1.0+)
+
+Launch a slick browser-based interface for casual users — no terminal required.
+
+```bash
+smf-swarm web
+```
+
+**Output:**
+```
+🎯  SMF Swarm Web UI
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Server:   http://127.0.0.1:8080
+Press Ctrl+C to stop
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+```
+
+**Features:**
+- Dark glassmorphism design (zero external CSS frameworks)
+- Mode selector: Standard | Debate | Full+Social
+- Domain selector: Technology | Financial | Political | General
+- Report upload: drag-and-drop PDF, TXT, or Markdown for pipeline context
+- Real-time SSE streaming: watch each pipeline node execute live
+- Confidence arc visualization with amber/gold colorway
+- Dissent and social simulation sections when applicable
+- **Download Report**: one-click Markdown export of any finished forecast
+
+**Custom port:**
+```bash
+smf-swarm web --port 3000 --host 0.0.0.0
+```
+
+The Web UI is self-contained — Flask API + vanilla JS + HTML5. No external CDN assets. Works offline after install.
+
+---
+
 ## 📖 Documentation
 
 | Document | Audience | What You'll Learn |
