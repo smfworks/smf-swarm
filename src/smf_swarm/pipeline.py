@@ -46,6 +46,7 @@ class PipelineResult:
     duration_s: float = 0.0
     social_modifier: Optional[float] = None
     health_score: float = 0.0
+    dissent: str = ""
     timestamp: str = field(default_factory=lambda: datetime.now().isoformat())
     status: str = "pending"
     metadata: dict = field(default_factory=dict)
@@ -97,6 +98,7 @@ class Pipeline:
             duration_s=round(t1 - t0, 1),
             social_modifier=state.get("confidence_modifier"),
             health_score=health.get("health_score", 0),
+            dissent=state.get("dissent", ""),
             timestamp=datetime.now().isoformat(),
             status=state.get("status", "COMPLETED"),
             metadata=state,
