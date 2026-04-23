@@ -12,6 +12,8 @@ Built by [SMF Works](https://smfworks.com). MIT licensed. Open source.
 
 **⚙️ Hardware-Aware Scaling.** On first run, SMF Swarm detects your available RAM and GPU VRAM, then recommends an agent-swarm profile sized for your machine — ranging from **Compact** (4 agents, runs comfortably on systems with as little as **8 GB RAM**) up to **Enthusiast** (12+ agents, for workstations with 32 GB+ RAM or discrete GPUs). You always retain full control: override the recommendation, choose a custom size, or lock your profile for future runs.
 
+**🌐 Web UI.** Prefer a point-and-click experience? SMF Swarm ships with a standalone web interface at `http://localhost:8080` — zero configuration, entry-level friendly, and perfect for users who want predictions without touching the terminal.
+
 ---
 
 ## ✨ Features
@@ -21,6 +23,8 @@ Built by [SMF Works](https://smfworks.com). MIT licensed. Open source.
 | **Standard Mode** | Fast single-model prediction. Gather data, engineer features, model, validate, report. |
 | **Debate Mode** | Adversarial ensemble — Optimist vs Skeptic vs Analyst, with opening arguments and rebuttals. |
 | **Full + Social** | Standard + Debate → merge → social swarm validation (agent swarm calibration). |
+| **Web UI** | Standalone web interface for entry-level, no-code use. Point-and-click predictions in your browser. |
+| **Hardware-Aware Scaling** | Auto-detects RAM / VRAM on first run and recommends a swarm profile sized for your machine — works on 8 GB workstations. Override or lock at any time. |
 | **Any LLM Provider** | Ollama, OpenAI, Anthropic, Groq, Together, or any OpenAI-compat API. Swap models in one command. |
 | **Health Monitoring** | Per-node tracking: duration, errors, success rate. |
 | **Structured Output** | JSON output with confidence, summary, risk assessment, and timestamps. |
