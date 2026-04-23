@@ -63,6 +63,21 @@ class SwarmConfig:
     memory_dir: str = str(Path.home() / "smf-swarm" / "memory")
     verbose: bool = True
 
+    # Resource profiler derived fields
+    max_steps: int = 100
+    swarm_profile: str = ""
+    profile_locked: bool = False
+    @property
+    def agent_count(self) -> int:
+        return self.social_agents
+
+    def apply_profile(self, profile_name: str, **kwargs) -> None:
+        """Apply a resource profiler profile to this config in-memory."""
+        self.swarm_profile = profile_name
+        for key, val in kwargs.items():
+            if hasattr(self, key):
+                setattr(self, key, val)
+
 
 # ─── Environment fallback ─────────────────────────
 
@@ -94,9 +109,21 @@ def load_config(path: Path | None = None) -> SwarmConfig:
         if data.get("llm"):
             cfg.llm = LLMConfig(**data["llm"])
         for key in ("default_mode", "default_domain", "social_agents", "social_rounds",
-                    "debaters", "debate_rounds", "output_dir", "memory_dir", "verbose"):
+                    "debaters", "debate_rounds", "output_dir", "memory_dir", "verbose",
+                    "max_steps", "swarm_profile", "profile_locked", "hardware_snapshot"):
             if key in data:
                 setattr(cfg, key, data[key])
+        # Also read nested swarm block
+        swarm = data.get("swarm", {})
+        if swarm:
+            for key in ("agent_count", "max_steps", "llm_model", "profile", "profile_locked"):
+                swarm_key = key
+                if key == "profile":
+                    swarm_key = "swarm_profile"
+                if swarm.get(key) is not None:
+                    setattr(cfg, swarm_key, swarm[key])
+            if swarm.get("llm_model"):
+                cfg.llm.model = swarm["llm_model"]
 
     # Env overrides (highest priority — ephemeral)
     cfg = _env_override(cfg)
@@ -192,12 +219,27 @@ def configure() -> SwarmConfig:
     cfg.llm.api_key = key
 
     # ── Step 5: defaults
-    print(f"\nStep 5/5 — Default prediction mode")
+    print(f"\nStep 5/6 — Default prediction mode")
     print("  [1] Standard  — fastest, single-model prediction")
     print("  [2] Debate    — adversarial ensemble (recommended)")
     print("  [3] Full      — standard + debate + social validation (most thorough)")
     mode = input("Default mode [default: 2]: ").strip() or "2"
     cfg.default_mode = {k: v for k, v in [("1", "standard"), ("2", "debate"), ("3", "full")]}.get(mode, "debate")
+
+    # ── Step 6: resource profile
+    print(f"\nStep 6/6 — Swarm resource profile")
+    print("  Detecting hardware and choosing the right swarm size for your machine...")
+    from smf_swarm.resource_profiler import run_profiler
+    profile = run_profiler(input_func=input)
+    cfg.apply_profile(profile.name,
+        agent_count=profile.agent_count,
+        max_steps=profile.max_steps,
+        social_agents=profile.agent_count,
+        social_rounds=max(1, profile.max_steps // 25),
+    )
+    # Sync the LLM model to the profile's recommendation if local
+    if cfg.llm.provider == "ollama":
+        cfg.llm.model = profile.llm_model
 
     # ── Save
     print(f"\n→ Saving configuration to {DEFAULT_CONFIG_FILE}")
@@ -206,6 +248,7 @@ def configure() -> SwarmConfig:
     print(f"Model: {cfg.llm.model} via {cfg.llm.provider}")
     print(f"Base URL: {cfg.llm.base_url}")
     print(f"Default mode: {cfg.default_mode}")
+    print(f"Swarm profile: {profile.display_name} ({profile.agent_count} agents × {profile.max_steps} steps)")
     print(f"\nRun  smf-swarm predict \"your question here\"  to make your first prediction.")
 
     return cfg

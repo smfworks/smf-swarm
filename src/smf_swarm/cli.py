@@ -30,6 +30,8 @@ def main(argv: list[str] = None):
         epilog="""
 Examples:
   smf-swarm configure                    # First-time setup wizard
+  smf-swarm profile                      # Detect hardware & choose profile
+  smf-swarm profile --auto               # Auto-apply recommended profile
   smf-swarm predict "Will NVIDIA exceed $4T?" --mode full --domain financial
   smf-swarm test                         # Verify LLM connection
   smf-swarm version                      # Show installed version
@@ -40,6 +42,15 @@ Examples:
 
     # ── configure ────────────────────────────────
     sub.add_parser("configure", help="Run first-time configuration wizard")
+
+    # ── profile ──────────────────────────────────
+    p_profile = sub.add_parser("profile", help="Detect hardware and choose swarm profile")
+    p_profile.add_argument("--auto", dest="auto", action="store_true",
+                           default=False, help="Auto-apply recommended profile (non-interactive)")
+    p_profile.add_argument("--show", dest="show", action="store_true",
+                           default=False, help="Show current profile without changing")
+    p_profile.add_argument("--reset", dest="reset", action="store_true",
+                           default=False, help="Force re-detection on next run")
 
     # ── predict ──────────────────────────────────
     p_predict = sub.add_parser("predict", help="Run a prediction")
@@ -73,6 +84,8 @@ Examples:
     # Dispatch
     if args.cmd == "configure":
         _cmd_configure()
+    elif args.cmd == "profile":
+        _cmd_profile(args)
     elif args.cmd == "predict":
         _cmd_predict(args)
     elif args.cmd == "test":
@@ -183,6 +196,34 @@ def _cmd_config():
     print(f"\nConfig file: {DEFAULT_CONFIG_FILE}")
     print(f"{'='*60}")
     print(json.dumps(cfg.__dict__, indent=2, default=str))
+
+
+def _cmd_profile(args):
+    from smf_swarm.resource_profiler import run_profiler, get_current_profile, reset_profile
+    from smf_swarm.resource_profiler.prompter import format_profile_table
+    from smf_swarm.resource_profiler.detector import detect_hardware
+    from smf_swarm.resource_profiler.registry import filter_available_profiles, recommend_profile
+
+    if args.reset:
+        reset_profile()
+        print("✅ Profile lock cleared. Run 'smf-swarm profile' to re-detect.")
+        return
+
+    if args.show:
+        current = get_current_profile()
+        if current:
+            print(f"\nCurrent profile: {current.get('name', 'not set')}")
+            print(f"  Agents: {current.get('agent_count')}")
+            print(f"  Steps:  {current.get('max_steps')}")
+            print(f"  Model:  {current.get('llm_model')}")
+            print(f"  Locked: {current.get('locked', False)}")
+        else:
+            print("\nNo profile configured yet. Run 'smf-swarm profile' to set one.")
+        return
+
+    # Run the profiler
+    profile = run_profiler(auto=args.auto)
+    print(f"\nProfile '{profile.display_name}' applied successfully.")
 
 
 def _cmd_web(args):
