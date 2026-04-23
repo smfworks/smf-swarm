@@ -10,6 +10,8 @@ Built by [SMF Works](https://smfworks.com). MIT licensed. Open source.
 
 **👤 Who is this for?** SMF Swarm is a developer/engineer tool. You interact with it via the command line or Python API. If you want a conversational, no-code experience, see [SMF Predict](https://smfworks.com/predict) — a commercial product that bundles SMF Swarm with a pre-configured Hermes Agent (or any OpenClaw-compatible agent) so you can type natural-language questions and get polished forecast reports back.
 
+**⚙️ Hardware-Aware Scaling.** On first run, SMF Swarm detects your available RAM and GPU VRAM, then recommends an agent-swarm profile sized for your machine — ranging from **Compact** (4 agents, runs comfortably on systems with as little as **8 GB RAM**) up to **Enthusiast** (12+ agents, for workstations with 32 GB+ RAM or discrete GPUs). You always retain full control: override the recommendation, choose a custom size, or lock your profile for future runs.
+
 ---
 
 ## ✨ Features
