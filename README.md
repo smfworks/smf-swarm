@@ -25,6 +25,7 @@ Built by [SMF Works](https://smfworks.com). MIT licensed. Open source.
 | **Full + Social** | Standard + Debate → merge → social swarm validation (agent swarm calibration). |
 | **Web UI** | Standalone web interface for entry-level, no-code use. Point-and-click predictions in your browser. Optional bearer-token auth and rate limiting. |
 | **Hardware-Aware Scaling** | Auto-detects RAM / VRAM on first run and recommends a swarm profile sized for your machine — works on 8 GB workstations. Override or lock at any time. |
+| **LangGraph Execution** *(v1.4.0+)* | Optional `[langgraph]` extra. Production `StateGraph` backend: node-level checkpointing, retry policies, `MemorySaver` persistence, parallel multi-sample Map-Reduce. Soft-switch auto-detects via `LANGGRAPH_AUTO=1`. |
 | **Any LLM Provider** | Ollama, OpenAI, Anthropic, Groq, Together, or any OpenAI-compat API. Swap models in one command. |
 | **Health Monitoring** | Per-node tracking: duration, errors, success rate, and dynamic ETA estimates. |
 | **Structured Output** | Pydantic-validated JSON extraction for confidence, validation, features, and sentiment. Hardened regex fallback for non-compliant models. |
@@ -120,6 +121,23 @@ smf-swarm predict "Will NVIDIA market cap exceed $4 trillion by July 2026?" \
   --mode full --domain financial
 ```
 
+**LangGraph execution** *(v1.4.0+)* — enable the `StateGraph` backend for checkpointing, retries, and parallel multi-sample:
+
+```bash
+# Install the extra
+pip install smf-swarm[langgraph]
+
+# Auto-detect (uses LangGraph when available)
+export LANGGRAPH_AUTO=1
+smf-swarm predict "..." --mode full
+
+# Force LangGraph for this run
+smf-swarm predict "..." --mode full --langgraph
+
+# Force classic synchronous path
+LANGGRAPH_DISABLE=1 smf-swarm predict "..." --mode full
+```
+
 Output:
 
 ```
@@ -163,6 +181,7 @@ Press Ctrl+C to stop
 - Domain selector: Technology | Financial | Political | General
 - Report upload: drag-and-drop PDF, TXT, or Markdown for pipeline context
 - Real-time SSE streaming: watch each pipeline node execute live
+- **LangGraph streaming** *(v1.4.0+)*: POST to `/api/predict/langgraph` for native checkpointed execution with identical SSE surface
 - Confidence arc visualization with amber/gold colorway
 - Dissent and social simulation sections when applicable
 - **Download Report**: one-click Markdown export of any finished forecast
@@ -199,7 +218,8 @@ p = Pipeline()
 result = p.run(
     "Will AI agent adoption in enterprise exceed 60% by end 2026?",
     mode="full",
-    domain="technology"
+    domain="technology",
+    langgraph=True,  # v1.4.0+ — use LangGraph backend (checkpointing, retries)
 )
 
 print(result.confidence)       # 0.82
