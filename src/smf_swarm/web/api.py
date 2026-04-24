@@ -58,11 +58,16 @@ def predict():
     if mode not in ("standard", "debate", "full"):
         return jsonify({"error": "Mode must be standard, debate, or full"}), 400
 
+    multi_sample = data.get("multi_sample", 1)
+    if not isinstance(multi_sample, int) or multi_sample < 1 or multi_sample > 20:
+        return jsonify({"error": "multi_sample must be an integer between 1 and 20"}), 400
+
     job_id = runner.submit(
         query=query,
         mode=mode,
         domain=domain,
         context_text=context_text,
+        multi_sample=multi_sample,
     )
     return jsonify({"job_id": job_id, "status": "queued"})
 

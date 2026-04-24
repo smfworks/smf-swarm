@@ -52,6 +52,7 @@ class Job:
     mode: str
     domain: str
     context_text: str = ""
+    multi_sample: int = 1
     status: str = "queued"  # queued | running | completed | failed
     progress_pct: int = 0
     current_node: Optional[str] = None
@@ -95,6 +96,7 @@ class JobRunner:
         mode: str = "debate",
         domain: str = "general",
         context_text: str = "",
+        multi_sample: int = 1,
     ) -> str:
         """Queue a new prediction job. Returns job_id."""
         job_id = f"smf-{uuid.uuid4().hex[:12]}"
@@ -148,6 +150,7 @@ class JobRunner:
                 mode=job.mode,
                 domain=job.domain,
                 run_social=(job.mode == "full"),
+                multi_sample=job.multi_sample,
             )
 
             # Restore originals
@@ -194,7 +197,7 @@ class JobRunner:
 
     def _result_to_dict(self, result: PipelineResult) -> dict:
         """Serialize PipelineResult to plain dict for JSON."""
-        return {
+        out = {
             "query": result.query,
             "domain": result.domain,
             "mode": result.mode,
@@ -210,6 +213,14 @@ class JobRunner:
             "social_modifier": result.social_modifier,
             "health_score": result.health_score,
         }
+        # v1.2.0+ fields
+        if result.metadata.get("sentiment_trajectory"):
+            out["sentiment_trajectory"] = result.metadata["sentiment_trajectory"]
+        if result.metadata.get("multi_sample"):
+            out["multi_sample"] = result.metadata["multi_sample"]
+        if result.metadata.get("baseline"):
+            out["baseline"] = result.metadata["baseline"]
+        return out
 
     def get_job(self, job_id: str) -> Optional[Job]:
         with self.lock:

@@ -7,6 +7,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.3.0] — 2026-04-24
+
+### Added
+- **Web UI Charts**
+  - Pure SVG chart engine (`src/smf_swarm/web/static/js/charts.js`): zero external deps, zero CDNs.
+  - `renderLineChart()` for sentiment trajectory across social rounds.
+  - `renderBarChart()` for multi-sample confidence distribution.
+  - Auto-rendered on result display when data is available; hidden otherwise.
+- **Run History / Compare Mode**
+  - `src/smf_swarm/web/static/js/history.js`: localStorage-backed run archive (max 100 entries).
+  - History modal with search, domain/mode filters, checkbox-select for compare.
+  - Compare modal: side-by-side column layout + word-level diff view (red strike + green add).
+  - "Load" button to restore any historical run into the current UI.
+  - Auto-saved every run unless "Auto-save to History" toggle is disabled.
+- **Advanced Settings Panel**
+  - Modal with sliders: Social Agents (5–30), Social Rounds (2–8), Temperature (0.1–0.9), Multi-Sample (1–10).
+  - Toggles: LLM Cache enable/disable, Auto-save to History.
+  - Custom Persona Template textarea for prompt override.
+  - All settings persisted in localStorage; reset to defaults available.
+- **PWA Support**
+  - `manifest.json`: standalone display, theme color `#0a0a0f`, 192/512 PNG icons.
+  - `sw.js`: caches static assets (HTML/CSS/JS); API calls excluded from cache.
+  - Service worker registration in `main.js` init.
+  - Apple PWA meta tags: `apple-mobile-web-app-capable`, `apple-mobile-web-status-bar-style`.
+- **CLI Rich Rendering** (optional `[cli]` extra)
+  - `src/smf_swarm/cli_rich.py`: `run_prediction_rich()` live dashboard using `rich`.
+  - Panels: header (query/mode/domain), progress bar with ETA, per-node status table, final result summary.
+  - `--rich` flag on `smf-swarm predict` to activate when `rich >= 13` is installed.
+  - Fallback to plain text if `rich` not available.
+- **CSS Expansion**
+  - 450+ new lines for chart containers, modals, history filters, compare grid, diff highlights, sliders, toggles, settings, icon buttons.
+
+### Changed
+- `pyproject.toml`: new optional dep group `[cli]` → `rich>=13.0.0`.
+- `src/smf_swarm/web/jobs.py`: Job dataclass gains `multi_sample` field; `_result_to_dict` now includes `sentiment_trajectory`, `multi_sample`, `baseline` for downstream rendering.
+- `src/smf_swarm/web/api.py`: `/api/predict` endpoint accepts `multi_sample` parameter (validated 1–20).
+- `src/smf_swarm/web/static/index.html`: modal overlays (History, Compare, Settings), manifest link, meta tags, settings button, history button.
+- `src/smf_swarm/web/static/js/main.js`: ELS extended; `displayResult()` triggers chart rendering and `saveToHistory()`.
+- `src/smf_swarm/web/static/css/main.css`: from 764 to ~1210 lines; modal system, history/compare/settings layouts, range slider styling, toggle switches.
+
+---
+
 ## [1.2.0] — 2026-04-24
 
 ### Added

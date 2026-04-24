@@ -41,6 +41,7 @@
         socialSection: document.getElementById("socialSection"),
         resultSection: document.getElementById("resultSection"),
         nodeList: document.getElementById("nodeList"),
+        chartsSection: document.getElementById("chartsSection"),
     };
 
     // ─── Helpers ──────────────────────────────────
@@ -324,12 +325,45 @@
             ELS.dissentSection.classList.add("hidden");
         }
 
+        // Sentiment trajectory chart
+        if (res.sentiment_trajectory && res.sentiment_trajectory.length > 0) {
+            ELS.chartsSection.classList.remove("hidden");
+            const trajData = res.sentiment_trajectory.map((pt, i) => ({
+                x: i,
+                y: typeof pt === "number" ? pt : (Array.isArray(pt) ? pt[1] : 0),
+                label: typeof pt === "number" ? `R${i+1}` : (Array.isArray(pt) ? `R${pt[0] || i+1}` : `R${i+1}`),
+            }));
+            renderLineChart("sentimentChart", trajData, {
+                title: "Sentiment Trajectory",
+                color: "#00d4ff",
+                areaColor: "rgba(0,212,255,0.08)",
+                xLabel: "Round",
+                yLabel: "Sentiment",
+            });
+            // Multi-sample distribution
+            if (res.multi_sample && res.multi_sample.confidences) {
+                const msData = res.multi_sample.confidences.map((c, i) => ({
+                    label: `Run ${i+1}`,
+                    value: c,
+                    color: "#f5a623",
+                }));
+                renderBarChart("multiSampleChart", msData, { height: 180 });
+            } else {
+                document.getElementById("multiSampleChart").innerHTML = "";
+            }
+        } else {
+            ELS.chartsSection.classList.add("hidden");
+        }
+
         if (res.social_modifier != null) {
             ELS.socialSim.textContent = `Social Modifier: ${res.social_modifier >= 0 ? '+' : ''}${res.social_modifier.toFixed(2)}`;
             ELS.socialSection.classList.remove("hidden");
         } else {
             ELS.socialSection.classList.add("hidden");
         }
+
+        // Save to local run history
+        saveToHistory(res);
     }
 
     function finishRun(success) {
@@ -400,4 +434,9 @@ ${res.social_modifier != null ? `## Social Simulation\n\nModifier: ${res.social_
     // ─── Init ────────────────────────────────────
     buildNodeList("debate");
     logLine("SMF Swarm Web UI initialized. Waiting for query.");
+
+    // Register service worker for PWA
+    if ("serviceWorker" in navigator) {
+        navigator.serviceWorker.register("/sw.js").catch(() => {});
+    }
 })();

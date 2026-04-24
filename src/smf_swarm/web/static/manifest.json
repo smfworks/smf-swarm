@@ -1,0 +1,17 @@
+{
+    "name": "SMF Predict — Swarm Intelligence",
+    "short_name": "SMF Predict",
+    "description": "Agent-powered predictive analysis with adversarial debate and social calibration.",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#0a0a0f",
+    "theme_color": "#0a0a0f",
+    "orientation": "portrait-primary",
+    "scope": "/",
+    "icons": [
+        {"src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+        {"src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"}
+    ],
+    "categories": ["productivity", "utilities"],
+    "lang": "en"
+}
