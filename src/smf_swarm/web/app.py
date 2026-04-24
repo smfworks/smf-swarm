@@ -29,6 +29,10 @@ def create_app() -> Flask:
     app.register_blueprint(api)
 
     # SPA catch-all: serve index.html for non-API, non-static routes
+    @app.route("/health")
+    def health():
+        return {"status": "ok", "version": "1.3.0"}
+
     @app.route("/")
     def index():
         return send_from_directory(static_folder, "index.html")
