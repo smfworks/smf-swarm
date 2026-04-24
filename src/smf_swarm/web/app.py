@@ -44,14 +44,25 @@ def create_app() -> Flask:
     return app
 
 
-def run_server(host: str = "127.0.0.1", port: int = 8080, debug: bool = False):
+def run_server(host: str = "127.0.0.1", port: int = 8080, debug: bool = False, auth_token: str | None = None, rate_limit: tuple[int, int] | None = None):
     """Print banner and start server."""
+    from smf_swarm.web.auth import init_auth
+    init_auth(token=auth_token, rate_limit=rate_limit)
+
     app = create_app()
 
     url = f"http://{host}:{port}"
     print("\n  SMF Swarm Web UI")
     print("  " + "━" * 52)
     print(f"  Server:   {url}")
+    if auth_token:
+        print(f"  Auth:     Bearer token required")
+    if rate_limit:
+        print(f"  Rate:     {rate_limit[0]} req / {rate_limit[1]}s")
+    if host == "0.0.0.0":
+        print("  ⚠ WARNING: Binding to 0.0.0.0 exposes this server to the network.")
+        if not auth_token:
+            print("  ⚠ WARNING: No auth token set. Anyone on your network can access this.")
     print(f"  Press Ctrl+C to stop")
     print("  " + "━" * 52 + "\n")
     sys.stdout.flush()

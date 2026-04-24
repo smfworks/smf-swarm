@@ -1,12 +1,12 @@
-"""SMF Swarm — LangGraph + CrewAI + Social Swarm Hybrid Predictive Pipeline.
+"""SMF Swarm — Custom Sequential Hybrid Pipeline with Adversarial Debate and Social Calibration.
 
 Predict the future with agent swarms. Run three modes — Standard, Debate, and
-Full+Social — seeded with any LLM provider you choose (local or cloud).
+Full+Social — powered by any LLM provider you choose (local or cloud).
 
 Example:
     from smf_swarm import Pipeline
     result = Pipeline("Will NVIDIA market cap exceed $4T by 2026?", mode="full", domain="financial")
-    print(result.final_confidence, result.executive_summary)
+    print(result.confidence, result.summary)
 """
 
 from __future__ import annotations

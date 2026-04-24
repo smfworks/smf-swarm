@@ -14,8 +14,6 @@ Usage:
 
 from __future__ import annotations
 
-import os
-import re
 import time
 from dataclasses import dataclass, field
 from typing import Optional
@@ -28,6 +26,13 @@ from smf_swarm.config import get_config, create_llm
 from smf_swarm.debate.engine import DebateEngine
 from smf_swarm.social.simulator import SocialSimulator
 from smf_swarm.monitor import SwarmMonitor
+from smf_swarm.structured import (
+    extract_confidence,
+    extract_data_quality,
+    extract_feature_count,
+    extract_validation,
+    extract_report_sections,
+)
 
 
 # ─── Result objects ─────────────────────────────
@@ -63,6 +68,9 @@ class Pipeline:
         self.debate = DebateEngine(self.llm)
         self.social = SocialSimulator(self.llm)
         self.monitor = SwarmMonitor()
+        # Initialize LLM response cache
+        from smf_swarm.cache import LLMCache
+        self._cache = LLMCache()
 
     def run(
         self,
@@ -103,6 +111,17 @@ class Pipeline:
             status=state.get("status", "COMPLETED"),
             metadata=state,
         )
+
+    def _cached_invoke(self, messages: list, node_name: str = "") -> Any:
+        """Invoke LLM with disk-backed response caching."""
+        kwargs = {"model": self.cfg.llm.model, "temperature": self.cfg.llm.temperature}
+        cached = self._cache.get(messages, **kwargs)
+        if cached:
+            print(f"  [Cache] Hit for {node_name}")
+            return cached
+        resp = self.llm.invoke(messages)
+        self._cache.set(messages, resp, **kwargs)
+        return resp
 
     def _run_state_machine(self, query: str, mode: str, domain: str, run_social: bool) -> dict:
         """Execute sequential node graph."""
@@ -166,11 +185,8 @@ class Pipeline:
                 "List key data sources, historical precedents, current indicators.\n"
                 "End with DATA_QUALITY_SCORE: [0-1]"
             )
-            resp = self.llm.invoke([HumanMessage(content=ctx)])
-            quality = 0.5
-            m = re.search(r'DATA_QUALITY_SCORE[:\\s]*([0-9]*\\.?[0-9]+)', resp.content, re.I)
-            if m:
-                quality = min(1.0, max(0.0, float(m.group(1))))
+            resp = self._cached_invoke([HumanMessage(content=ctx)], "data_gatherer")
+            quality = extract_data_quality(resp.content)
             return {"raw_data": resp.content, "data_quality_score": quality}
 
     def _feature_engineer(self, state: dict) -> dict:
@@ -181,11 +197,8 @@ class Pipeline:
                 "Identify top 5-8 predictive features.\n"
                 "End with FEATURE_COUNT: [number]"
             )
-            resp = self.llm.invoke([HumanMessage(content=ctx)])
-            count = 5
-            m = re.search(r'FEATURE_COUNT[:\\s]*(\\d+)', resp.content, re.I)
-            if m:
-                count = int(m.group(1))
+            resp = self._cached_invoke([HumanMessage(content=ctx)], "feature_engineer")
+            count = extract_feature_count(resp.content)
             return {"features": resp.content, "feature_count": count}
 
     def _reflection(self, state: dict) -> dict:
@@ -201,7 +214,7 @@ class Pipeline:
                 "4. What would change your mind?\n\n"
                 "Do NOT give the prediction. Give ONLY structured reasoning (max 500 words)."
             )
-            resp = self.llm.invoke([HumanMessage(content=ctx)])
+            resp = self._cached_invoke([HumanMessage(content=ctx)], "reflection")
             return {"reflection": resp.content}
 
     def _model_runner(self, state: dict) -> dict:
@@ -217,8 +230,8 @@ class Pipeline:
                 "Produce a specific numerical prediction.\n"
                 "End with CONFIDENCE: [0-1]"
             )
-            resp = self.llm.invoke([HumanMessage(content=ctx)])
-            conf = self._extract_confidence(resp.content)
+            resp = self._cached_invoke([HumanMessage(content=ctx)], "model_runner")
+            conf = extract_confidence(resp.content)
             return {"prediction": resp.content, "confidence": conf}
 
     def _validator(self, state: dict) -> dict:
@@ -231,8 +244,8 @@ class Pipeline:
                 f"PREDICTION: {state['prediction'][:1500]}\n"
                 "End with VALIDATION: PASS or VALIDATION: FAIL"
             )
-            resp = self.llm.invoke([HumanMessage(content=ctx)])
-            passed = "PASS" in resp.content.upper()[-200:]
+            resp = self._cached_invoke([HumanMessage(content=ctx)], "validator")
+            passed = extract_validation(resp.content)
             return {
                 "validation_result": resp.content,
                 "validation_passed": passed,
@@ -251,8 +264,8 @@ class Pipeline:
                 f"DEBATE (confidence {deb_conf:.2f}):\n{deb_pred}\n\n"
                 "End with CONFIDENCE: [number]"
             )
-            resp = self.llm.invoke([HumanMessage(content=ctx)])
-            conf = self._extract_confidence(resp.content)
+            resp = self._cached_invoke([HumanMessage(content=ctx)], "merge")
+            conf = extract_confidence(resp.content)
             bonus = 0.1 if abs(std_conf - deb_conf) < 0.2 else -0.05
             final_conf = min(0.95, conf + bonus)
             return {"final_consensus": resp.content, "final_confidence": final_conf}
@@ -303,50 +316,23 @@ class Pipeline:
                 "FULL_PREDICTION: [expanded]\n"
                 "RISK_ASSESSMENT: [risks]"
             )
-            resp = self.llm.invoke([HumanMessage(content=ctx)])
+            resp = self._cached_invoke([HumanMessage(content=ctx)], "reporter")
             content = resp.content
 
-            summary, risk = self._extract_sections(content)
+            parsed = extract_report_sections(content)
             return {
                 "final_report": content,
-                "executive_summary": summary or content[:300],
-                "risk_assessment": risk or "See prediction for risks",
-                "final_confidence": final_conf,
+                "executive_summary": parsed["executive_summary"] or content[:300],
+                "risk_assessment": parsed["risk_assessment"] or "See prediction for risks",
+                "final_confidence": parsed.get("confidence", final_conf),
                 "status": "COMPLETED",
             }
 
     def _extract_confidence(self, text: str) -> float:
-        """Extract confidence from LLM output using last-match regex."""
-        text = text.replace("*", "")
-        matches = re.findall(r'CONFIDENCE[:\\s]+([0-9]*\\.?[0-9]+)', text, re.I)
-        if matches:
-            return min(1.0, max(0.0, float(matches[-1])))
-        return 0.5
+        """Extract confidence from LLM output using structured extraction first, then regex fallback."""
+        return extract_confidence(text)
 
     def _extract_sections(self, text: str) -> tuple:
         """Extract Executive Summary and Risk Assessment from report."""
-        lines = text.split("\n")
-        summary = ""
-        risk = ""
-        buf = []
-        capture = None
-        for line in lines:
-            u = line.upper().strip()
-            if "EXECUTIVE_SUMMARY" in u or "EXECUTIVE SUMMARY" in u:
-                capture = "summary"
-                buf = [line.split(":", 1)[1].strip()] if ":" in line else []
-                continue
-            elif "FULL_PREDICTION" in u:
-                if capture == "summary":
-                    summary = " ".join(buf[:20])
-                capture = None
-                continue
-            elif "RISK_ASSESSMENT" in u or "RISK ASSESSMENT" in u:
-                capture = "risk"
-                buf = [line.split(":", 1)[1].strip()] if ":" in line else []
-                continue
-            elif capture and line.strip() and not line.strip().startswith("*"):
-                buf.append(line.strip())
-        if capture == "risk":
-            risk = " ".join(buf[:20])
-        return summary, risk
+        parsed = extract_report_sections(text)
+        return parsed["executive_summary"], parsed["risk_assessment"]

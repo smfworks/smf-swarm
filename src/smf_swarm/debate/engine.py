@@ -15,6 +15,7 @@ Usage:
 
 from __future__ import annotations
 
+import concurrent.futures
 import random
 import re
 from typing import TypedDict
@@ -118,11 +119,16 @@ class DebateEngine:
         """Execute full debate with randomized ordering and surfaced dissent."""
         result: dict = {}
 
-        # Phase 1: Openings (all three in parallel is ideal; sequential for now)
-        for role in self._ROLES:
-            result.update(self._opening(state, role))
+        # Phase 1: Openings (independent — run in parallel)
+        with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
+            futures = {
+                executor.submit(self._opening, state, role): role["opening_key"]
+                for role in self._ROLES
+            }
+            for future in concurrent.futures.as_completed(futures):
+                result.update(future.result())
 
-        # Phase 2: Rebuttals
+        # Phase 2: Rebuttals (sequential due to dependency on openings)
         for role in self._ROLES:
             result.update(self._rebuttal(state, role, result))
 

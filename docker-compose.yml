@@ -1,0 +1,42 @@
+services:
+  smf-swarm:
+    build: .
+    container_name: smf-swarm
+    ports:
+      - "8080:8080"
+    environment:
+      - MODEL_NAME=${MODEL_NAME:-ollama}
+      - OPENAI_BASE_URL=${OPENAI_BASE_URL:-http://ollama:11434/v1}
+      - O_API_KEY=${O_API_KEY:-ollama}
+    volumes:
+      - smf-cache:/root/.cache/smf-swarm
+      - smf-output:/root/smf-swarm/output
+      - smf-config:/root/.config/smf-swarm
+    command: ["web", "--host", "0.0.0.0", "--port", "8080"]
+    restart: unless-stopped
+    depends_on:
+      - ollama
+
+  # Optional: Ollama sidecar for local inference
+  ollama:
+    image: ollama/ollama:latest
+    container_name: smf-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-data:/root/.ollama
+    restart: unless-stopped
+    # Uncomment on GPU systems:
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: all
+    #           capabilities: [gpu]
+
+volumes:
+  smf-cache:
+  smf-output:
+  smf-config:
+  ollama-data:

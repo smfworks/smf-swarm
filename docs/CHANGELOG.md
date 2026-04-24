@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.1.0] — 2026-04-24
+
+### Added
+- **Trust / Security**
+  - API keys can now be stored in the OS keyring (optional `keyring` dependency). Config file stores a placeholder marker only. Graceful fallback to file-based storage with `chmod 0o600` enforced on every save.
+  - Pydantic-based structured output extraction (`src/smf_swarm/structured.py`) replaces fragile regex parsing across all pipeline nodes (confidence, data quality, features, validation, report sections, sentiment). Hardened regex fallbacks remain for non-JSON outputs.
+  - Web UI optional bearer-token authentication + in-memory sliding-window rate limiting (`src/smf_swarm/web/auth.py`). Warns when binding to `0.0.0.0` without auth.
+- **Performance**
+  - Disk-based LLM response caching with SHA-256 query+config+mode key. TTL default 24 h. Cache hits bypass all LLM calls. `--no-cache` CLI flag to force fresh run.
+  - Parallel debate openings via `ThreadPoolExecutor` (Optimist + Skeptic run concurrently). ~30–40 % debate time savings.
+  - Progress ETA estimates added to `SwarmMonitor`. CLI and Web UI report remaining time per node after run history is established.
+- **Install / Packaging**
+  - `Dockerfile` and `docker-compose.yml` for one-command deployment (`docker compose up`). Includes Ollama sidecar service and `smf-swarm` container.
+  - `install.sh` now auto-detects OS and can install Ollama (Linux via official script, macOS via Homebrew). Recommends `pipx` or auto-creates a virtual environment.
+- **Misc**
+  - README and ARCHITECTURE.md updated to accurately describe the architecture as a "custom sequential hybrid pipeline" rather than claiming LangGraph / CrewAI integration.
+  - Version bumped to `1.1.0`.
+
+### Changed
+- `pyproject.toml`: added optional dependency group `[trust]` for `keyring`, `[web]` for `flask`, `[dev]` for test/lint tools.
+- `src/smf_swarm/config.py`: config save now enforces `os.chmod(config_path, 0o600)`; supports `keyring` read/write.
+
+---
+
 ## [1.0.1] — 2026-04-21
 
 ### Fixed
@@ -54,5 +78,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+[1.1.0]: https://github.com/smfworks/smf-swarm/compare/v1.0.1...v1.1.0
 [1.0.1]: https://github.com/smfworks/smf-swarm/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/smfworks/smf-swarm/releases/tag/v1.0.0

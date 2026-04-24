@@ -75,6 +75,9 @@ Examples:
     p_web = sub.add_parser("web", help="Launch the web UI server")
     p_web.add_argument("--port", type=int, default=8080, help="Port to bind (default: 8080)")
     p_web.add_argument("--host", type=str, default="127.0.0.1", help="Host to bind (default: 127.0.0.1)")
+    p_web.add_argument("--token", type=str, default=None, help="Optional bearer token for API auth")
+    p_web.add_argument("--rate-limit", dest="rate_limit", type=int, nargs=2, metavar=("COUNT", "SECONDS"),
+                       default=None, help="Rate limit API requests per IP (e.g. --rate-limit 10 60)")
 
     args = parser.parse_args(argv)
     if not args.cmd:
@@ -228,4 +231,5 @@ def _cmd_profile(args):
 
 def _cmd_web(args):
     from smf_swarm.web.app import run_server
-    run_server(host=args.host, port=args.port)
+    rate_limit = tuple(args.rate_limit) if args.rate_limit else None
+    run_server(host=args.host, port=args.port, auth_token=args.token, rate_limit=rate_limit)

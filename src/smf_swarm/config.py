@@ -5,10 +5,13 @@ Handles:
   - Loading / saving config to ~/.config/smf-swarm/config.yaml
   - LLM client factory with any provider
   - Environment variable fallbacks (O_API_KEY, OPENAI_BASE_URL, MODEL_NAME)
+  - Optional OS keyring integration for API key storage
+  - File permissions hardening (chmod 0o600 on config files)
 """
 
 import os
 import json
+import stat
 from pathlib import Path
 from dataclasses import dataclass, field, asdict
 from typing import Literal, Optional
@@ -18,8 +21,18 @@ try:
 except ImportError:
     yaml = None  # JSON fallback
 
+try:
+    import keyring
+    _KEYRING_AVAILABLE = True
+except ImportError:
+    _KEYRING_AVAILABLE = False
+
 from langchain_openai import ChatOpenAI
 from langchain_core.language_models.chat_models import BaseChatModel
+
+# Keyring service name for API key storage
+_KEYRING_SERVICE = "smf-swarm"
+_KEYRING_USERNAME = "api_key"
 
 DEFAULT_CONFIG_DIR = Path.home() / ".config" / "smf-swarm"
 DEFAULT_CONFIG_FILE = DEFAULT_CONFIG_DIR / "config.yaml"
@@ -108,6 +121,8 @@ def load_config(path: Path | None = None) -> SwarmConfig:
             data = json.loads(text)
         if data.get("llm"):
             cfg.llm = LLMConfig(**data["llm"])
+            # Resolve keyring-stored API key if a placeholder was saved
+            cfg.llm.api_key = _resolve_api_key(cfg.llm.api_key)
         for key in ("default_mode", "default_domain", "social_agents", "social_rounds",
                     "debaters", "debate_rounds", "output_dir", "memory_dir", "verbose",
                     "max_steps", "swarm_profile", "profile_locked", "hardware_snapshot"):
@@ -131,16 +146,52 @@ def load_config(path: Path | None = None) -> SwarmConfig:
 
 
 def save_config(cfg: SwarmConfig, path: Path | None = None):
-    """Save config to disk."""
+    """Save config to disk with restricted permissions (0o600)."""
     if path is None:
         path = DEFAULT_CONFIG_FILE
     path.parent.mkdir(parents=True, exist_ok=True)
     data = asdict(cfg)
+
+    # If keyring is available and the key is a real secret (not ollama),
+    # store the key in the OS keychain and save a placeholder.
+    api_key = data.get("llm", {}).get("api_key", "")
+    if _KEYRING_AVAILABLE and api_key and api_key not in ("ollama", "", "sk-"):
+        try:
+            keyring.set_password(_KEYRING_SERVICE, _KEYRING_USERNAME, api_key)
+            data["llm"]["api_key"] = _KEYRING_USERNAME  # marker
+        except Exception:
+            pass  # keyring failed; keep key in file (will still be chmod 600)
+
     if yaml:
         path.write_text(yaml.dump(data, default_flow_style=False, sort_keys=False))
     else:
         json_path = path.with_suffix(".json")
         json_path.write_text(json.dumps(data, indent=2))
+
+    # Harden permissions: owner read/write only
+    try:
+        os.chmod(path, 0o600)
+    except OSError:
+        pass
+
+
+def _load_keyring_api_key() -> str | None:
+    """Retrieve API key from OS keyring if available."""
+    if _KEYRING_AVAILABLE:
+        try:
+            return keyring.get_password(_KEYRING_SERVICE, _KEYRING_USERNAME)
+        except Exception:
+            pass
+    return None
+
+
+def _resolve_api_key(stored_key: str) -> str:
+    """If the stored config has a keyring marker, retrieve from keyring."""
+    if stored_key == _KEYRING_USERNAME:
+        key = _load_keyring_api_key()
+        if key:
+            return key
+    return stored_key
 
 
 # ─── LLM factory ──────────────────────────────────

@@ -8,11 +8,11 @@ from __future__ import annotations
 import json
 import os
 
-from flask import Blueprint, request, jsonify, Response
+from flask import Blueprint, request, jsonify, Response, g
 
 from smf_swarm.web.jobs import runner
 from smf_swarm.web.upload import ingest_file
-
+from smf_swarm.web.auth import init_auth, require_auth, check_rate_limit
 
 api = Blueprint("api", __name__, url_prefix="/api")
 
@@ -23,11 +23,29 @@ def _stream_json(data: dict) -> str:
     return "data: " + json.dumps(data) + "\n\n"
 
 
+# ─── Auth decorators ──────────────────────────────
+
+def _check_request():
+    """Apply auth and rate limiting to API routes."""
+    # Auth
+    auth_error = require_auth()
+    if auth_error:
+        return jsonify(auth_error[0]), auth_error[1]
+    # Rate limit by IP
+    rate_error = check_rate_limit(request.remote_addr or "unknown")
+    if rate_error:
+        return jsonify(rate_error[0]), rate_error[1]
+    return None
+
 # ─── Routes ───────────────────────────────────────
 
 @api.route("/predict", methods=["POST"])
 def predict():
     """Submit a prediction job. Returns job_id."""
+    result = _check_request()
+    if result:
+        return result
+
     data = request.get_json(force=True) or {}
 
     query = data.get("query", "").strip()

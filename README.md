@@ -1,6 +1,6 @@
 # SMF Swarm 🎯
 
-**LangGraph + CrewAI + Social Swarm Hybrid Predictive Pipeline**
+**Custom Sequential Hybrid Pipeline with Adversarial Debate and Social Calibration**
 
 Predict the future with agent swarms. SMF Swarm runs three prediction modes
 — Standard, Debate, and Full+Social — powered by any LLM you choose

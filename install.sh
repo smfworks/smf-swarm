@@ -65,6 +65,30 @@ if command -v smf-swarm > /dev/null 2>&1; then
     echo "  2. smf-swarm test            # Verify your LLM connection"
     echo "  3. smf-swarm predict \"Will X happen?\" --mode full"
     echo ""
+    # ── 5. Check Ollama (optional) ──────────────────
+    echo ""
+    echo "🔍 Checking for Ollama..."
+    if command -v ollama > /dev/null 2>&1; then
+        echo "✅ Ollama found: $(ollama --version 2>&1 | head -n1)"
+    elif [ "$(uname -s)" = "Darwin" ]; then
+        echo "  ℹ Ollama not found. Install with:  brew install ollama"
+    elif [ "$(uname -s)" = "Linux" ]; then
+        echo "  ℹ Ollama not found. Install with:"
+        echo "    curl -fsSL https://ollama.com/install.sh | sh"
+    else
+        echo "  ℹ Ollama not found. See: https://ollama.com/download"
+    fi
+
+    # ── 6. Post-install guidance ──────────────────────
+    echo ""
+    echo "📌 Installation method note:"
+    echo "  For isolated installs (avoids sudo), use pipx:"
+    echo "    pipx install smf-swarm"
+    echo ""
+    echo "  For containerized install:"
+    echo "    docker compose up   (from the smf-swarm repo root)"
+    echo ""
+
     echo "Documentation: https://github.com/smfworks/smf-swarm"
     echo "Support:       michael@smfworks.com | @michaelgannotti"
     exit 0

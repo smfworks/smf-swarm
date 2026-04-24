@@ -8,12 +8,17 @@
 
 ## 1. High-Level Concept
 
-SMF Swarm is a **hybrid predictive pipeline** that combines three
-information channels into a single confidence-calibrated forecast:
+SMF Swarm is a **custom sequential hybrid predictive pipeline** that combines three
+information channels into a single confidence-calibrated forecast via a deterministic
+state machine:
 
 1. **Standard** — Analytical model on engineered features
 2. **Debate** — Adversarial ensemble (Optimist vs Skeptic vs Analyst)
-3. **Social** — Agent swarm validation on discourse and sentiment
+3. **Social** — Agent swarm calibration on discourse and sentiment
+
+The pipeline is intentionally sequential (not graph-based) to ensure deterministic
+outputs, eliminate deadlocks, and simplify debugging. Parallelism is applied
+selectively where nodes are independent.
 
 **The social layer alone cannot make predictions.** It is explicitly
 dependent on the standard debate layer's content for seeding, producing a
@@ -265,7 +270,7 @@ If not, create an adapter in `llm_adapters.py` following the LangChain interface
 
 | Decision | Rationale |
 |----------|-----------|
-| Sequential node execution (not LangGraph) | Eliminates ThreadPool deadlocks, simpler debugging, identical LLM outputs |
+| Sequential node execution | Eliminates deadlocks, simpler debugging, deterministic LLM outputs. Parallelism applied selectively for independent nodes (e.g., debate openings). |
 | `last-match` confidence extraction | Prevents intermediate "confidence" mentions from corrupting extracted score |
 | Reflection node before model runner | Forces explicit CoT extraction before prediction, reducing hidden-assumption errors |
 | Confidence modifier × 0.2 scaling | Prevents social layer from dominating prediction; acts as calibration, not oracle |
