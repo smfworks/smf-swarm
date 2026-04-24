@@ -60,12 +60,16 @@ class BacktestStore:
                     data_quality REAL,
                     health_score REAL,
                     social_modifier REAL,
+                    langgraph INTEGER,  -- 0 = classic, 1 = LangGraph
+                    thread_id TEXT,
+                    checkpoint_path TEXT,
                     created_at TEXT DEFAULT (datetime('now')),
                     updated_at TEXT DEFAULT (datetime('now'))
                 );
                 CREATE INDEX IF NOT EXISTS idx_pred_domain ON predictions(domain);
                 CREATE INDEX IF NOT EXISTS idx_pred_mode ON predictions(mode);
                 CREATE INDEX IF NOT EXISTS idx_pred_created ON predictions(created_at);
+                CREATE INDEX IF NOT EXISTS idx_pred_thread ON predictions(thread_id);
             """)
 
     def record(
@@ -83,6 +87,9 @@ class BacktestStore:
         data_quality: float = 0.5,
         health_score: float = 0.0,
         social_modifier: Optional[float] = None,
+        langgraph: bool = False,
+        thread_id: str = "",
+        checkpoint_path: str = "",
     ) -> str:
         """Record a new prediction. Returns prediction_id."""
         pred_id = hashlib.sha256(f"{query}{datetime.now().isoformat()}".encode()).hexdigest()[:16]
@@ -102,6 +109,9 @@ class BacktestStore:
             "data_quality": data_quality,
             "health_score": health_score,
             "social_modifier": social_modifier,
+            "langgraph": 1 if langgraph else 0,
+            "thread_id": thread_id,
+            "checkpoint_path": checkpoint_path,
         }
         with sqlite3.connect(self.db_path) as conn:
             conn.execute(
@@ -109,11 +119,13 @@ class BacktestStore:
                 INSERT INTO predictions
                 (id, query, domain, mode, prediction, confidence, ground_truth,
                  llm_model, temperature, social_agents, social_rounds,
-                 duration_s, data_quality, health_score, social_modifier)
+                 duration_s, data_quality, health_score, social_modifier,
+                 langgraph, thread_id, checkpoint_path)
                 VALUES
                 (:id, :query, :domain, :mode, :prediction, :confidence, :ground_truth,
                  :llm_model, :temperature, :social_agents, :social_rounds,
-                 :duration_s, :data_quality, :health_score, :social_modifier)
+                 :duration_s, :data_quality, :health_score, :social_modifier,
+                 :langgraph, :thread_id, :checkpoint_path)
                 """,
                 data,
             )

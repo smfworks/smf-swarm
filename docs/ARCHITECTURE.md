@@ -162,7 +162,18 @@ smf_swarm/
 ├── __init__.py          # Package entry, exports Pipeline, config, version
 ├── config.py            # Config dataclass, wizard, env overrides, LLM factory
 ├── pipeline.py          # Public API: Pipeline.run(), result object, node graph
+├── pipeline_langgraph.py # Optional: LangGraph StateGraph backend (v1.4+)
+│                         # SwarmState, build_pipeline_graph(), LangGraphPipeline
 ├── cli.py               # Terminal entry point: smf-swarm command
+├── cli_rich.py          # Optional rich dashboard (--rich flag)
+├── structured.py        # Pydantic-validated JSON + regex extraction
+├── cache.py             # Disk-backed LLM response cache
+├── backtest.py          # SQLite calibration store (Brier score, accuracy)
+├── tools.py             # Optional DuckDuckGo search + Python REPL
+├── rag.py               # Optional ChromaDB + sentence-transformers RAG
+├── predict/             # Optional Prophet/ARIMA/trend baselines
+│   ├── __init__.py
+│   └── baseline.py
 ├── debate/
 │   └── engine.py        # 3-agent debate: openings, rebuttals, judge, dissent
 │                          DebateEngine class, prompt templates, confidence extraction

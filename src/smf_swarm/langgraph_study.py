@@ -1,14 +1,15 @@
 """SMF Swarm — LangGraph Migration Feasibility Study
 
-This module is a DESIGN DOCUMENT, not yet active code. It maps the existing
-_run_state_machine sequential flow to langgraph.graph.StateGraph and
-documents the migration path, risk, and trade-offs.
-
-Key principle: the migration is ADDITIVE. Every existing Pipeline method
-(_data_gatherer, _feature_engineer, etc.) can be wrapped as a
-StateGraph node with ~5 lines of boilerplate. No business logic is
-rewritten.
+DEPRECATED: This module was the original prototype. The production module is
+`pipeline_langgraph.py`. This file is kept for reference only.
 """
+
+import warnings
+warnings.warn(
+    "langgraph_study.py is deprecated. Use pipeline_langgraph for production.",
+    DeprecationWarning,
+    stacklevel=2,
+)
 
 from __future__ import annotations
 

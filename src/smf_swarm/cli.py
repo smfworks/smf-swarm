@@ -62,6 +62,8 @@ Examples:
                            default=True, help="Disable social simulation even in full mode")
     p_predict.add_argument("--multi-sample", type=int, default=1, dest="multi_sample",
                            help="Number of temperature-swept runs for confidence uncertainty (default: 1)")
+    p_predict.add_argument("--langgraph", dest="langgraph", action="store_true",
+                           default=False, help="Run via LangGraph backend if installed")
     p_predict.add_argument("--output", "-o", default=None, help="Output file path (JSON)")
     p_predict.add_argument("--no-cache", dest="no_cache", action="store_true",
                            default=False, help="Bypass LLM response cache")
@@ -151,6 +153,7 @@ def _cmd_predict(args):
         domain=domain,
         run_social=run_social,
         multi_sample=args.multi_sample,
+        langgraph=args.langgraph,
     )
 
     print(f"\n{'='*60}")

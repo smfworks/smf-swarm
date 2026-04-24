@@ -7,6 +7,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.4.0] — 2026-04-24
+
+### Added
+- **LangGraph Execution Backend** (optional `[langgraph]` extra — `pip install smf-swarm[langgraph]`)
+  - New `src/smf_swarm/pipeline_langgraph.py`: production `StateGraph` adapter.
+    - `SwarmState` (TypedDict) with 30+ fields mirroring PipelineResult.
+    - `_make_node()` factory wrapping every Pipeline node method (~5 lines per node).
+    - `build_pipeline_graph()`: compiles 12 nodes + 5 conditional routers + interrupt_after validator + `MemorySaver` checkpointing + `RetryPolicy(max_attempts=2)`.
+    - `LangGraphPipeline` class: `.run()` with `stream_callback`, `.resume()` from checkpoint, `.stream()` generator for SSE.
+    - `create_pipeline()` factory: `LANGGRAPH_AUTO=1` enables auto-detect; `LANGGRAPH_DISABLE=1` forces classic path.
+  - Unit test suite:
+    - `tests/test_langgraph_nodes.py` — 22 tests covering all 12 node wrappers, timing, ok-short-circuit.
+    - `tests/test_langgraph_routing.py` — 5 router families, 20+ boundary state combinations.
+    - `tests/test_langgraph_pipeline.py` — constructor, run(), multi_sample fallback, stream_callback, resume(), create_pipeline() factory.
+    - `tests/test_langgraph_integration.py` — graph compilation, structural parity with classic Pipeline.
+- **Web SSE Adapter for LangGraph**
+  - `src/smf_swarm/web/jobs.py`: `_run_job_langgraph()` maps `stream_callback` node events to SSE `JobEvent` progress events (identical surface as classic mode).
+  - `src/smf_swarm/web/api.py`: `/api/predict` accepts `"langgraph": true`; new dedicated `/api/predict/langgraph` endpoint returns 503 if LangGraph not installed.
+- **Backtest Integration with Checkpoint Metadata**
+  - `src/smf_swarm/backtest.py`: schema extended with `langgraph INTEGER`, `thread_id TEXT`, `checkpoint_path TEXT`; index `idx_pred_thread`.
+  - `src/smf_swarm/pipeline.py`: `_backtest.record()` passes `langgraph` and `thread_id` from `result.metadata`.
+- **Soft Switch**
+  - `Pipeline.run(..., langgraph=None)` auto-detects when `LANGGRAPH_AUTO=1` is set and `[langgraph]` is installed.
+  - `Pipeline.run(..., langgraph=True)` forces LangGraph. `Pipeline.run(..., langgraph=False)` forces classic.
+  - CLI flag `--langgraph` on `smf-swarm predict` enables LangGraph backend per-run.
+- **Deprecation**
+  - `src/smf_swarm/langgraph_study.py` marked deprecated; production code lives in `pipeline_langgraph.py`.
+
+### Changed
+- `pyproject.toml`: added `[langgraph]` extra (`langgraph>=0.3.0`).
+- `src/smf_swarm/pipeline.py`: `run()` `langgraph` parameter changed from `bool = False` to `bool | None = None` for tri-state logic (True/False/Auto).
+- `docs/ARCHITECTURE.md`: module tree updated to include `pipeline_langgraph.py` and all v1.2–v1.4 modules.
+
+### Deprecated
+- `src/smf_swarm/langgraph_study.py` — import triggers `DeprecationWarning`. Use `pipeline_langgraph.py`.
+
+---
+
 ## [1.3.0] — 2026-04-24
 
 ### Added

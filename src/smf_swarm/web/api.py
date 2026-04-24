@@ -68,8 +68,49 @@ def predict():
         domain=domain,
         context_text=context_text,
         multi_sample=multi_sample,
+        langgraph=data.get("langgraph", False),
     )
     return jsonify({"job_id": job_id, "status": "queued"})
+
+
+@api.route("/predict/langgraph", methods=["POST"])
+def predict_langgraph():
+    """Submit a prediction job using LangGraph backend."""
+    result = _check_request()
+    if result:
+        return result
+
+    data = request.get_json(force=True) or {}
+    query = data.get("query", "").strip()
+    mode = data.get("mode", "debate").lower()
+    domain = data.get("domain", "general").lower()
+    context_text = data.get("context_text", "")
+
+    if not query:
+        return jsonify({"error": "Query is required"}), 400
+    if mode not in ("standard", "debate", "full"):
+        return jsonify({"error": "Mode must be standard, debate, or full"}), 400
+
+    try:
+        from smf_swarm.pipeline_langgraph import LANGGRAPH_AVAILABLE
+        if not LANGGRAPH_AVAILABLE:
+            return jsonify({"error": "LangGraph not installed. pip install smf-swarm[langgraph]"}), 503
+    except ImportError:
+        return jsonify({"error": "LangGraph not installed"}), 503
+
+    multi_sample = data.get("multi_sample", 1)
+    if not isinstance(multi_sample, int) or multi_sample < 1 or multi_sample > 20:
+        return jsonify({"error": "multi_sample must be an integer between 1 and 20"}), 400
+
+    job_id = runner.submit(
+        query=query,
+        mode=mode,
+        domain=domain,
+        context_text=context_text,
+        multi_sample=multi_sample,
+        langgraph=True,
+    )
+    return jsonify({"job_id": job_id, "status": "queued", "langgraph": True})
 
 
 @api.route("/stream/<job_id>")

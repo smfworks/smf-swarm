@@ -14,6 +14,7 @@ Usage:
 
 from __future__ import annotations
 
+import os
 import time
 from dataclasses import dataclass, field
 from typing import Optional, Any
@@ -35,6 +36,17 @@ from smf_swarm.structured import (
 )
 from smf_swarm.backtest import BacktestStore
 from smf_swarm.cache import LLMCache  # kept for backward compat; cache init below
+
+# ── LangGraph soft-switch (optional) ──────────────────────────
+_LANGGRAPH_PIPELINE = None
+_LANGGRAPH_AVAILABLE = False
+try:
+    from smf_swarm.pipeline_langgraph import LangGraphPipeline
+    _LANGGRAPH_PIPELINE = LangGraphPipeline
+    _LANGGRAPH_AVAILABLE = True
+except ImportError:
+    _LANGGRAPH_AVAILABLE = False
+    _LANGGRAPH_PIPELINE = None
 
 
 # ─── Result objects ─────────────────────────────
@@ -89,14 +101,42 @@ class Pipeline:
         domain: str = None,
         run_social: bool = None,
         multi_sample: int = 1,
+        langgraph: bool | None = None,
     ) -> PipelineResult:
         """Run a prediction in the specified mode.
 
         Args:
             multi_sample: Number of temperature-swept runs to average for
                 uncertainty quantification (default 1 = single run).
-                Confidence reports mean and std across runs.
+            langgraph: If True, force LangGraph backend. If False, force
+                classic _run_state_machine. If None (default), auto-detect
+                via LANGGRAPH_AUTO=1 when langgraph is installed.
+                Environment LANGGRAPH_DISABLE=1 overrides all.
         """
+        env_disable = os.environ.get("LANGGRAPH_DISABLE", "").lower() in ("1", "true", "yes")
+        env_auto = os.environ.get("LANGGRAPH_AUTO", "").lower() in ("1", "true", "yes")
+        use_langgraph = False
+
+        if env_disable:
+            use_langgraph = False
+        elif langgraph is True:
+            use_langgraph = True
+        elif langgraph is None and env_auto and _LANGGRAPH_AVAILABLE:
+            use_langgraph = True
+        elif langgraph is False:
+            use_langgraph = False
+
+        if use_langgraph and _LANGGRAPH_AVAILABLE and _LANGGRAPH_PIPELINE is not None:
+            lgp = _LANGGRAPH_PIPELINE(llm=self.llm)
+            return lgp.run(
+                query=query,
+                mode=mode,
+                domain=domain,
+                run_social=run_social,
+                multi_sample=multi_sample,
+                thread_id=f"pipe_{id(self)}_{time.time()}",
+            )
+
         mode = (mode or self.cfg.default_mode).lower()
         domain = domain or self.cfg.default_domain
         if run_social is None:
@@ -157,6 +197,8 @@ class Pipeline:
                 data_quality=result.data_quality,
                 health_score=result.health_score,
                 social_modifier=result.social_modifier,
+                langgraph=result.metadata.get("langgraph", False),
+                thread_id=result.metadata.get("thread_id", ""),
             )
         except Exception:
             pass  # best-effort; never block on backtest

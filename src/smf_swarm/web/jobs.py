@@ -97,6 +97,7 @@ class JobRunner:
         domain: str = "general",
         context_text: str = "",
         multi_sample: int = 1,
+        langgraph: bool = False,
     ) -> str:
         """Queue a new prediction job. Returns job_id."""
         job_id = f"smf-{uuid.uuid4().hex[:12]}"
@@ -106,11 +107,16 @@ class JobRunner:
             mode=mode,
             domain=domain,
             context_text=context_text,
+            multi_sample=multi_sample,
         )
         with self.lock:
             self.jobs[job_id] = job
 
-        job.thread = threading.Thread(target=self._run_job, args=(job,), daemon=True)
+        job.thread = threading.Thread(
+            target=self._run_job_langgraph if langgraph else self._run_job,
+            args=(job,),
+            daemon=True,
+        )
         job.thread.start()
         return job_id
 
@@ -250,6 +256,61 @@ class JobRunner:
     def _sse_data(self, data: dict) -> str:
         import json
         return json.dumps(data)
+
+    def _run_job_langgraph(self, job: Job):
+        """Execute pipeline via LangGraph with native streaming events."""
+        def emit(ev: JobEvent):
+            job.events.put(ev)
+
+        job.status = "running"
+        emit(JobEvent(type="log", message=f"Job {job.job_id} started (LangGraph) — mode: {job.mode}"))
+
+        try:
+            from smf_swarm.pipeline_langgraph import LangGraphPipeline
+
+            lgp = LangGraphPipeline()
+
+            effective_query = job.query
+            if job.context_text:
+                effective_query = f"CONTEXT:\n{job.context_text[:4000]}\n\nQUERY: {job.query}"
+                emit(JobEvent(type="log", message=f"Ingested context: {len(job.context_text)} chars"))
+
+            def stream_callback(node_name: str, update: dict):
+                job.current_node = node_name
+                # Map LangGraph node names to progress events
+                emit(JobEvent(type="progress", node=node_name, status="complete"))
+
+            result = lgp.run(
+                query=effective_query,
+                mode=job.mode,
+                domain=job.domain,
+                run_social=(job.mode == "full"),
+                multi_sample=job.multi_sample,
+                thread_id=job.job_id,
+                stream_callback=stream_callback,
+            )
+
+            job.status = "completed"
+            job.result = result
+            job.completed_at = datetime.now().isoformat()
+            job.progress_pct = 100
+
+            emit(JobEvent(type="progress", node="reporter", status="complete", duration=result.duration_s))
+            emit(JobEvent(type="result", result=self._result_to_dict(result)))
+            emit(JobEvent(type="log", message=f"Completed in {result.duration_s:.0f}s | Confidence: {result.confidence:.2f}"))
+
+        except ImportError as exc:
+            job.status = "failed"
+            job.error = str(exc)
+            job.completed_at = datetime.now().isoformat()
+            emit(JobEvent(type="error", message=str(exc)))
+            emit(JobEvent(type="log", message=f"FAILED: LangGraph not installed: {exc}"))
+        except Exception as e:
+            job.status = "failed"
+            job.error = str(e)
+            job.completed_at = datetime.now().isoformat()
+            emit(JobEvent(type="error", message=str(e)))
+            emit(JobEvent(type="log", message=f"FAILED: {e}"))
 
 
 # Global singleton
