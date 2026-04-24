@@ -23,11 +23,15 @@ Built by [SMF Works](https://smfworks.com). MIT licensed. Open source.
 | **Standard Mode** | Fast single-model prediction. Gather data, engineer features, model, validate, report. |
 | **Debate Mode** | Adversarial ensemble — Optimist vs Skeptic vs Analyst, with opening arguments and rebuttals. |
 | **Full + Social** | Standard + Debate → merge → social swarm validation (agent swarm calibration). |
-| **Web UI** | Standalone web interface for entry-level, no-code use. Point-and-click predictions in your browser. |
+| **Web UI** | Standalone web interface for entry-level, no-code use. Point-and-click predictions in your browser. Optional bearer-token auth and rate limiting. |
 | **Hardware-Aware Scaling** | Auto-detects RAM / VRAM on first run and recommends a swarm profile sized for your machine — works on 8 GB workstations. Override or lock at any time. |
 | **Any LLM Provider** | Ollama, OpenAI, Anthropic, Groq, Together, or any OpenAI-compat API. Swap models in one command. |
-| **Health Monitoring** | Per-node tracking: duration, errors, success rate. |
-| **Structured Output** | JSON output with confidence, summary, risk assessment, and timestamps. |
+| **Health Monitoring** | Per-node tracking: duration, errors, success rate, and dynamic ETA estimates. |
+| **Structured Output** | Pydantic-validated JSON extraction for confidence, validation, features, and sentiment. Hardened regex fallback for non-compliant models. |
+| **Response Caching** | Disk-based LLM query cache with SHA-256 keyed by query+config+mode. TTL default 24 h. Repeat experiments bypass all LLM calls. `--no-cache` to force fresh runs. |
+| **Parallel Debate** | Optimist and Skeptic openings run concurrently via `ThreadPoolExecutor` for ~30–40 % debate speedup. |
+| **Docker Ready** | `Dockerfile` + `docker-compose.yml` for one-command deployment with Ollama sidecar. |
+| **Secure Config** | Optional OS keyring integration for API keys. Config file is `chmod 0o600` on every save. |
 
 ---
 
@@ -167,6 +171,8 @@ Press Ctrl+C to stop
 ```bash
 smf-swarm web --port 3000 --host 0.0.0.0
 ```
+
+**⚠️ Security note:** Binding to `0.0.0.0` exposes the Web UI on your network. Use `--token <secret>` (or `WEB_TOKEN` env var) to enable bearer-token authentication. Rate limiting is active by default.
 
 The Web UI is self-contained — Flask API + vanilla JS + HTML5. No external CDN assets. Works offline after install.
 

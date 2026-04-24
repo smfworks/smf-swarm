@@ -7,6 +7,56 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.2.0] — 2026-04-24
+
+### Added
+- **Predictive Baselines** (optional `[predict]` extras)
+  - `prophet>=1.1.0`, `statsmodels>=0.14.0`, `scikit-learn>=1.3.0` listed in `pyproject.toml` under `[project.optional-dependencies]`.
+  - New module `src/smf_swarm/predict/baseline.py`: `StatisticalBaseline` class.
+    - Automatically detects and lazily loads Prophet, statsmodels, scikit-learn.
+    - Extracts time-series data from raw text (date:value pairs or JSON arrays).
+    - Running order: Prophet (≥5 pts) → ARIMA(1,1,1) (≥8 pts) → polynomial trend (≥3 pts).
+    - Heuristic fallback: bullish/bearish keyword balance when no series found.
+  - Integrated into pipeline as `_statistical_baseline` node after feature engineering.
+    - Gracefully skips if `[predict]` extras not installed.
+    - Results stored in `state["baseline"]` for downstream inspection.
+- **Tool Calling for Data Gatherer**
+  - New `src/smf_swarm/tools.py`: `ToolKit` class.
+    - `duckduckgo_search()`: free web search via `duckduckgo-search` package (3 results by default, optional dep).
+    - `python_repl()`: restricted-restricted Python execution for math/finance calculations.
+  - `_data_gatherer` node now auto-injects ToolKit snippets and RAGStore context when available.
+- **Local RAG** (optional `[rag]` extras)
+  - New `src/smf_swarm/rag.py`: `RAGStore` class backed by ChromaDB + sentence-transformers (`all-MiniLM-L6-v2`).
+    - `add_text()`, `add_pdf_text()` for chunking and ingesting documents.
+    - `query()` returns top-k relevant chunks.
+    - Graceful no-op if `[rag]` extras not installed.
+    - RAG context auto-injected into data gatherer when documents have been uploaded.
+- **Backtesting / Calibration**
+  - New `src/smf_swarm/backtest.py`: `BacktestStore` backed by SQLite.
+    - Schema: predictions table with query, domain, mode, confidence, ground_truth, duration, data_quality, health_score, social_modifier.
+    - `record()`: every `Pipeline.run()` auto-records into backtest store (best-effort, never blocks).
+    - `update_ground_truth()`: mark predictions as resolved.
+    - `calibration_report()`: accuracy, Brier score, and calibration bins.
+  - New CLI command: `smf-swarm backtest`.
+    - `--domain`, `--mode` filters.
+    - `--set-truth <id> --outcome true|false` for manual ground-truth updates.
+- **Multi-Sample Uncertainty**
+  - `Pipeline.run(..., multi_sample=N)` runs the full pipeline N times at varied temperatures (base ±0.15 per step, bounded 0.1–0.9).
+  - Returns mean confidence, std confidence, and representative state (closest to mean).
+  - CLI flag: `smf-swarm predict "..." --multi-sample 5`.
+  - JSON output includes `multi_sample` dict with temperatures, confidences, mean, std.
+- **CLI Improvements**
+  - `--no-cache` flag on `smf-swarm predict` to bypass LLM cache.
+  - `LLMCache.disable()` method for runtime cache suppression.
+  - `--backtest` subcommand with calibration reporting.
+
+### Changed
+- `pyproject.toml`: split optional deps into `[predict]`, `[trust]`, `[rag]`, `[dev]`.
+- `src/smf_swarm/pipeline.py`: added `_backtest`, `_baseline`, `_multi_sample_run`, `_statistical_baseline`.
+- `src/smf_swarm/cli.py`: added `--multi-sample`, `--no-cache`, `--backtest` subcommand, backtest dispatch.
+
+---
+
 ## [1.1.0] — 2026-04-24
 
 ### Added
@@ -78,6 +128,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+[1.2.0]: https://github.com/smfworks/smf-swarm/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/smfworks/smf-swarm/compare/v1.0.1...v1.1.0
 [1.0.1]: https://github.com/smfworks/smf-swarm/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/smfworks/smf-swarm/releases/tag/v1.0.0

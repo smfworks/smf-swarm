@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import time
 from dataclasses import dataclass, field
-from typing import Optional
+from typing import Optional, Any
 from datetime import datetime
 
 from langchain_openai import ChatOpenAI
@@ -33,6 +33,8 @@ from smf_swarm.structured import (
     extract_validation,
     extract_report_sections,
 )
+from smf_swarm.backtest import BacktestStore
+from smf_swarm.cache import LLMCache  # kept for backward compat; cache init below
 
 
 # ─── Result objects ─────────────────────────────
@@ -71,6 +73,14 @@ class Pipeline:
         # Initialize LLM response cache
         from smf_swarm.cache import LLMCache
         self._cache = LLMCache()
+        # Backtest store for calibration tracking
+        self._backtest = BacktestStore()
+        # Statistical baseline (optional [predict] extras)
+        try:
+            from smf_swarm.predict.baseline import StatisticalBaseline
+            self._baseline: "StatisticalBaseline | None" = StatisticalBaseline()
+        except Exception:
+            self._baseline = None
 
     def run(
         self,
@@ -78,8 +88,15 @@ class Pipeline:
         mode: str = None,
         domain: str = None,
         run_social: bool = None,
+        multi_sample: int = 1,
     ) -> PipelineResult:
-        """Run a prediction in the specified mode."""
+        """Run a prediction in the specified mode.
+
+        Args:
+            multi_sample: Number of temperature-swept runs to average for
+                uncertainty quantification (default 1 = single run).
+                Confidence reports mean and std across runs.
+        """
         mode = (mode or self.cfg.default_mode).lower()
         domain = domain or self.cfg.default_domain
         if run_social is None:
@@ -89,16 +106,28 @@ class Pipeline:
         self.monitor.reset()
         self.monitor.start_pipeline(query, mode)
 
-        state = self._run_state_machine(query, mode, domain, run_social)
+        # Multi-sample support: run N times at varied temperatures
+        if multi_sample > 1:
+            results = self._multi_sample_run(
+                query, mode, domain, run_social, n=multi_sample
+            )
+            state = results["aggregated_state"]
+            multi_meta = results
+        else:
+            state = self._run_state_machine(query, mode, domain, run_social)
+            multi_meta = {}
 
         health = self.monitor.end_pipeline("completed" if state.get("ok") else "failed")
         t1 = time.time()
 
-        return PipelineResult(
+        final_conf = state.get("final_confidence", 0.0)
+        conf_std = multi_meta.get("confidence_std", 0.0)
+
+        result = PipelineResult(
             query=query,
             domain=domain,
             mode=mode,
-            confidence=state.get("final_confidence", 0.0),
+            confidence=round(final_conf, 4),
             prediction_text=state.get("final_report", ""),
             summary=state.get("executive_summary", ""),
             risk=state.get("risk_assessment", ""),
@@ -109,8 +138,85 @@ class Pipeline:
             dissent=state.get("dissent", ""),
             timestamp=datetime.now().isoformat(),
             status=state.get("status", "COMPLETED"),
-            metadata=state,
+            metadata={**state, "multi_sample": multi_meta},
         )
+
+        # Record to backtest store
+        try:
+            self._backtest.record(
+                query=query,
+                domain=domain,
+                mode=mode,
+                prediction=result.summary,
+                confidence=result.confidence,
+                llm_model=self.cfg.llm.model,
+                temperature=self.cfg.llm.temperature,
+                social_agents=self.cfg.social_agents,
+                social_rounds=self.cfg.social_rounds,
+                duration_s=result.duration_s,
+                data_quality=result.data_quality,
+                health_score=result.health_score,
+                social_modifier=result.social_modifier,
+            )
+        except Exception:
+            pass  # best-effort; never block on backtest
+
+        return result
+
+    def _multi_sample_run(
+        self, query: str, mode: str, domain: str, run_social: bool, n: int
+    ) -> dict:
+        """Run pipeline n times at varied temperatures. Returns aggregated state."""
+        import numpy as np
+
+        # Temperature values: base ± small perturbations (bounded 0.1–0.9)
+        base_temp = self.cfg.llm.temperature
+        temps = [max(0.1, min(0.9, base_temp + (i - n // 2) * 0.15)) for i in range(n)]
+
+        states = []
+        confidences = []
+
+        original_temperature = self.cfg.llm.temperature
+        for i, temp in enumerate(temps):
+            try:
+                self.cfg.llm.temperature = temp
+                st = self._run_state_machine(query, mode, domain, run_social)
+                states.append(st)
+                confidences.append(st.get("final_confidence", st.get("confidence", 0.5)))
+                print(f"  [Multi-sample] Run {i + 1}/{n} temp={temp:.2f} conf={confidences[-1]:.2f}")
+            except Exception as e:
+                print(f"  [Multi-sample] Run {i + 1}/{n} FAILED: {e}")
+            finally:
+                self.cfg.llm.temperature = original_temperature
+
+        if not confidences:
+            # Fallback to single run with base temp
+            self.cfg.llm.temperature = original_temperature
+            st = self._run_state_machine(query, mode, domain, run_social)
+            return {
+                "aggregated_state": st,
+                "confidence_mean": st.get("final_confidence", 0.0),
+                "confidence_std": 0.0,
+                "temperatures": [original_temperature],
+                "confidences": [st.get("final_confidence", 0.0)],
+                "runs": 1,
+            }
+
+        mean_conf = float(np.mean(confidences))
+        std_conf = float(np.std(confidences))
+        # Use the state with confidence closest to mean as representative
+        best_idx = int(np.argmin([abs(c - mean_conf) for c in confidences]))
+        rep_state = dict(states[best_idx])
+        rep_state["final_confidence"] = round(mean_conf, 4)
+
+        return {
+            "aggregated_state": rep_state,
+            "confidence_mean": round(mean_conf, 4),
+            "confidence_std": round(std_conf, 4),
+            "temperatures": temps,
+            "confidences": confidences,
+            "runs": len(confidences),
+        }
 
     def _cached_invoke(self, messages: list, node_name: str = "") -> Any:
         """Invoke LLM with disk-backed response caching."""
@@ -134,6 +240,8 @@ class Pipeline:
             state.update(self._data_gatherer(state))
             # ── Engineer ───────────────────────
             state.update(self._feature_engineer(state))
+            # ── Statistical Baseline (optional) ──
+            state.update(self._statistical_baseline(state))
 
             if mode in ("standard", "full"):
                 # ── Reflect (Standard) ───────────
@@ -179,9 +287,34 @@ class Pipeline:
 
     def _data_gatherer(self, state: dict) -> dict:
         with self.monitor.track("data_gatherer"):
+            enriched = ""
+            # Optional tool search
+            try:
+                from smf_swarm.tools import ToolKit
+                toolkit = ToolKit()
+                if toolkit.search_available:
+                    search = toolkit.duckduckgo_search(state["query"], max_results=3)
+                    if search.get("results"):
+                        snippets = "\n".join(f"- {r['title']}: {r['body'][:200]}" for r in search["results"])
+                        enriched = f"\n\n--- Web Search Snippets ---\n{snippets}\n"
+            except Exception:
+                pass
+            # Optional RAG context
+            rag_context = ""
+            try:
+                from smf_swarm.rag import RAGStore
+                rag = RAGStore()
+                if rag.available:
+                    rag_results = rag.query(state["query"], n_results=3)
+                    if rag_results.get("results"):
+                        chunks = "\n".join(f"- {r['text'][:200]}" for r in rag_results["results"])
+                        rag_context = f"\n\n--- Uploaded Reports ---\n{chunks}\n"
+            except Exception:
+                pass
             ctx = (
                 f"Gather data and signal sources for: {state['query']}\n"
                 f"Domain: {state['domain']}\n"
+                f"{enriched}{rag_context}\n"
                 "List key data sources, historical precedents, current indicators.\n"
                 "End with DATA_QUALITY_SCORE: [0-1]"
             )
@@ -284,6 +417,26 @@ class Pipeline:
                 "sentiment_trajectory": result["sentiment_trajectory"],
                 "social_total_actions": result["total_actions"],
             }
+
+    def _statistical_baseline(self, state: dict) -> dict:
+        """Optional statistical baseline forecast. Runs if [predict] extras installed.
+        Produces side-by-side data that the merge node can optionally weight."""
+        with self.monitor.track("statistical_baseline"):
+            if self._baseline is None:
+                return {"baseline": None, "baseline_method": "none"}
+            try:
+                result = self._baseline.forecast(
+                    query=state["query"],
+                    raw_data=state.get("raw_data", ""),
+                    features=state.get("features", ""),
+                )
+                return {
+                    "baseline": result,
+                    "baseline_method": result.get("method", "none"),
+                    "baseline_confidence": result.get("confidence"),
+                }
+            except Exception as e:
+                return {"baseline": None, "baseline_method": "error", "baseline_error": str(e)}
 
     def _reporter(self, state: dict) -> dict:
         with self.monitor.track("reporter"):

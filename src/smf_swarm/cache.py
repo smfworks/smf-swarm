@@ -68,3 +68,7 @@ class LLMCache:
     def close(self):
         if self._cache:
             self._cache.close()
+
+    def disable(self):
+        """Temporarily disable cache (e.g., for --no-cache CLI flag)."""
+        self.enabled = False

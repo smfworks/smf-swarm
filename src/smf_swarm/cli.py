@@ -60,7 +60,22 @@ Examples:
     p_predict.add_argument("--domain", default=None, help="Domain: technology|financial|political|general")
     p_predict.add_argument("--no-social", dest="social", action="store_false",
                            default=True, help="Disable social simulation even in full mode")
+    p_predict.add_argument("--multi-sample", type=int, default=1, dest="multi_sample",
+                           help="Number of temperature-swept runs for confidence uncertainty (default: 1)")
     p_predict.add_argument("--output", "-o", default=None, help="Output file path (JSON)")
+    p_predict.add_argument("--no-cache", dest="no_cache", action="store_true",
+                           default=False, help="Bypass LLM response cache")
+
+    # ── backtest ─────────────────────────────────
+    p_backtest = sub.add_parser("backtest", help="Report calibration and historical accuracy")
+    p_backtest.add_argument("--domain", default=None, help="Filter by domain")
+    p_backtest.add_argument("--mode", default=None, choices=["standard", "debate", "full"],
+                           help="Filter by mode")
+    p_backtest.add_argument("--set-truth", dest="truth_id", default=None,
+                           help="Update ground truth for a prediction ID")
+    p_backtest.add_argument("--outcome", dest="outcome", default=None,
+                           choices=["true", "false"],
+                           help="Outcome for --set-truth (true/false)")
 
     # ── test ─────────────────────────────────────
     sub.add_parser("test", help="Run a connectivity smoke test against your LLM")
@@ -91,6 +106,8 @@ Examples:
         _cmd_profile(args)
     elif args.cmd == "predict":
         _cmd_predict(args)
+    elif args.cmd == "backtest":
+        _cmd_backtest(args)
     elif args.cmd == "test":
         _cmd_test()
     elif args.cmd == "version":
@@ -126,11 +143,14 @@ def _cmd_predict(args):
     print(f"{'='*60}\n")
 
     pipeline = Pipeline()
+    if args.no_cache:
+        pipeline._cache.disable()  # type: ignore
     result = pipeline.run(
         query=args.query,
         mode=mode,
         domain=domain,
         run_social=run_social,
+        multi_sample=args.multi_sample,
     )
 
     print(f"\n{'='*60}")
@@ -142,6 +162,10 @@ def _cmd_predict(args):
     print(f"  Duration:        {result.duration_s:.0f}s")
     if result.social_modifier is not None:
         print(f"  Social Modifier: {result.social_modifier:+.2f}")
+    # Multi-sample uncertainty indicator
+    multi_meta = result.metadata.get("multi_sample", {})
+    if multi_meta.get("runs", 0) > 1:
+        print(f"  Confidence Std:  {multi_meta.get('confidence_std', 0):.4f} (over {multi_meta['runs']} runs)")
     print(f"\n  EXECUTIVE SUMMARY")
     print(f"  {'-'*56}")
     for line in result.summary.split("\n")[:10]:
@@ -161,6 +185,12 @@ def _cmd_predict(args):
             "social_modifier": result.social_modifier,
             "timestamp": datetime.now().isoformat(),
         }
+        # Include baseline if present
+        if result.metadata.get("baseline"):
+            out["baseline"] = result.metadata["baseline"]
+        # Include multi-sample if present
+        if result.metadata.get("multi_sample"):
+            out["multi_sample"] = result.metadata["multi_sample"]
         Path(args.output).write_text(json.dumps(out, indent=2))
         print(f"\n  Saved to: {args.output}")
 
@@ -233,3 +263,29 @@ def _cmd_web(args):
     from smf_swarm.web.app import run_server
     rate_limit = tuple(args.rate_limit) if args.rate_limit else None
     run_server(host=args.host, port=args.port, auth_token=args.token, rate_limit=rate_limit)
+
+
+def _cmd_backtest(args):
+    from smf_swarm.backtest import BacktestStore
+    import json
+    bt = BacktestStore()
+    # Handle ground-truth update
+    if args.truth_id:
+        if not args.outcome:
+            print("❌ --set-truth requires --outcome true|false")
+            sys.exit(1)
+        ok = bt.update_ground_truth(args.truth_id, args.outcome == "true")
+        if ok:
+            print(f"✅ Ground truth updated for {args.truth_id}")
+        else:
+            print(f"❌ Prediction ID not found: {args.truth_id}")
+        return
+    # Show calibration report
+    report = bt.calibration_report(domain=args.domain, mode=args.mode)
+    print(json.dumps(report, indent=2))
+    print(f"\n  Total tracked predictions: {report['total']}")
+    print(f"  Resolved with ground truth: {report['resolved']}")
+    if report['accuracy'] is not None:
+        print(f"  Accuracy (resolved): {report['accuracy']:.2%}")
+    if report['brier_score'] is not None:
+        print(f"  Brier score (resolved): {report['brier_score']:.4f}")
