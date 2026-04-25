@@ -10,11 +10,11 @@ Covers:
 
 from __future__ import annotations
 
+import pytest
 import os
 import sys
 from pathlib import Path
 from unittest.mock import MagicMock, patch, PropertyMock
-import pytest
 
 _repo = Path(__file__).resolve().parent.parent
 _src = _repo / "src"

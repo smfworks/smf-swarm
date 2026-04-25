@@ -7,6 +7,7 @@ and edge cases (retry iteration, validation failure, social enabled).
 
 from __future__ import annotations
 
+import pytest
 import sys
 from pathlib import Path
 

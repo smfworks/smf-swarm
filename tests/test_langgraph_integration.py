@@ -8,10 +8,10 @@ Goals:
 
 from __future__ import annotations
 
+import pytest
 import sys
 from pathlib import Path
 from unittest.mock import MagicMock, patch
-import pytest
 
 _repo = Path(__file__).resolve().parent.parent
 _src = _repo / "src"
@@ -205,7 +205,8 @@ def test_graph_mermaid_diagram_exists():
     assert graph is not None
     # draw_mermaid() returns a string or raises ImportError if graphviz missing
     try:
-        diagram = graph.draw_mermaid()
+        gg = graph.get_graph()
+        diagram = gg.draw_mermaid()
         assert isinstance(diagram, str)
         assert "data_gatherer" in diagram
     except ImportError:

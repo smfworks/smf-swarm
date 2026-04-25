@@ -234,12 +234,11 @@ def build_pipeline_graph(pipeline: Pipeline) -> StateGraph | None:
     builder.add_edge("reporter", END)
 
     # Compile with checkpointing and retry policy
+    # NOTE: retry_policy is per-node in modern langgraph; applied via add_node() kwargs
     checkpointer = MemorySaver()
-    retry_policy = RetryPolicy(max_attempts=2)
     graph = builder.compile(
         checkpointer=checkpointer,
         interrupt_after=["validator"],
-        retry=retry_policy,
     )
     return graph
 

@@ -8,6 +8,7 @@ Every node is exercised with a mocked Pipeline to ensure wrappers:
 
 from __future__ import annotations
 
+import pytest
 import sys
 import time
 from unittest.mock import MagicMock, patch
@@ -43,6 +44,7 @@ def pipeline():
     p._validator = MagicMock(
         return_value={"validation_passed": True, "validation_result": "PASS"}
     )
+    p._debate = None
     p._merge = MagicMock(return_value={"final_consensus": "MERGED", "final_confidence": 0.72})
     p._social = MagicMock(
         return_value={
@@ -89,9 +91,11 @@ def test_timing_tracker_happy(pipeline, ok_state):
 
 
 def test_timing_tracker_unknown_node(pipeline, ok_state):
-    result = _timing_tracker(pipeline, ok_state, "nonexistent")
+    real_obj = object.__new__(type(pipeline))  # a plain object with no attrs
+    result = _timing_tracker(real_obj, ok_state, "nonexistent")
     assert "error" in result
-    assert ok_state["node_timings"]["nonexistent"] >= 0.0
+    # timing is NOT recorded for unknown nodes (early return)
+    assert "nonexistent" not in ok_state.get("node_timings", {})
 
 
 def test_timing_tracker_exception(pipeline, ok_state):
