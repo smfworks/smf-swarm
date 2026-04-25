@@ -22,9 +22,28 @@ Selected datasets must satisfy the following criteria:
 | 2 | **Good Judgment Open (GJOpen)** | Geopolitics & Social | <https://www.gjopen.com/questions/> + periodic CSV exports | Tournament-grade geopolitical forecasts. Questions are binary or numeric-range. We derive binary sub-questions from numeric items (e.g., "Will X exceed threshold Y by date Z?"). |
 | 3 | **FiveThirtyEight MLB Elo Forecasts** | Sports (Time-Series) | <https://github.com/fivethirtyeight/data/tree/master/mlb-elo> | Historical game-level predictions with model-generated win probabilities and actual outcomes. Useful for stress-testing calibration on highly stochastic, high-frequency events. |
 
-> **Data extraction script** (to be added): `scripts/fetch_benchmark_data.py` will pull records via the Metaculus API, parse GJOpen CSVs, and merge FiveThirtyEight rows into a canonical schema:
+> **Data extraction script**: `scripts/fetch_benchmark_data.py` pulls records via the Metaculus API (authenticated), parses FiveThirtyEight CSVs, and writes a canonical JSONL schema:
+>
+> Usage:
+> ```bash
+> # Fetch live data
+> python scripts/fetch_benchmark_data.py --datasets metaculus,538mlb --limit 500
+>
+> # Generate synthetic data for testing
+> python scripts/fetch_benchmark_data.py --dummy --limit 200
+> ```
+>
+> JSONL schema:
 > ```json
-> {"id": "...", "question_text": "...", "domain": "...", "outcome": 0|1, "resolved_at": "..."}
+> {"id": "...", "question_text": "...", "domain": "...", "outcome": 0|1, "resolved_at": "...", "source": "...", "url": "..."}
+> ```
+>
+> Benchmark harness:
+> ```bash
+> # Run SMF Swarm against a dataset
+> smf-swarm benchmark --dataset dummy --modes standard,debate,full --multi-samples 1,5 --hw-env
+>
+> # Results written to benchmark_results/<run_id>/report.md
 > ```
 
 ---

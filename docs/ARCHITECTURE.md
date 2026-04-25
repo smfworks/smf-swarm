@@ -164,6 +164,9 @@ smf_swarm/
 ├── pipeline.py          # Public API: Pipeline.run(), result object, node graph
 ├── pipeline_langgraph.py # Optional: LangGraph StateGraph backend (v1.4+)
 │                         # SwarmState, build_pipeline_graph(), LangGraphPipeline
+├── benchmarks/           # Optional: Benchmark harness (v1.5+)
+│   ├── __init__.py
+│   └── harness.py        # BenchmarkHarness, BenchmarkReport, metric computation
 ├── cli.py               # Terminal entry point: smf-swarm command
 ├── cli_rich.py          # Optional rich dashboard (--rich flag)
 ├── structured.py        # Pydantic-validated JSON + regex extraction

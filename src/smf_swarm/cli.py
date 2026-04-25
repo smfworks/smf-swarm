@@ -96,6 +96,17 @@ Examples:
     p_web.add_argument("--rate-limit", dest="rate_limit", type=int, nargs=2, metavar=("COUNT", "SECONDS"),
                        default=None, help="Rate limit API requests per IP (e.g. --rate-limit 10 60)")
 
+    # ── benchmark ────────────────────────────────
+    p_bench = sub.add_parser("benchmark", help="Run SMF Swarm against a benchmark dataset and produce Brier/ECE reports")
+    p_bench.add_argument("--dataset", required=True, help="Path to canonical JSONL dataset (use 'dummy' for auto-generated)")
+    p_bench.add_argument("--modes", default="standard", help="Comma-separated modes: standard,debate,full")
+    p_bench.add_argument("--multi-samples", default="1", help="Comma-separated multi_sample values: 1,5")
+    p_bench.add_argument("--output-dir", default="benchmark_results/", help="Directory for JSON + MD reports")
+    p_bench.add_argument("--max-questions", type=int, default=0, help="Cap number of questions (0 = all)")
+    p_bench.add_argument("--fetch", action="store_true", help="Auto-fetch dataset if not found")
+    p_bench.add_argument("--hw-env", action="store_true", help="Log hardware environment before running")
+    p_bench.add_argument("--llm-model", default="", help="LLM model name for report metadata")
+
     args = parser.parse_args(argv)
     if not args.cmd:
         parser.print_help()
@@ -118,6 +129,8 @@ Examples:
         _cmd_config()
     elif args.cmd == "web":
         _cmd_web(args)
+    elif args.cmd == "benchmark":
+        _cmd_benchmark(args)
 
 
 def _cmd_configure():
@@ -292,3 +305,80 @@ def _cmd_backtest(args):
         print(f"  Accuracy (resolved): {report['accuracy']:.2%}")
     if report['brier_score'] is not None:
         print(f"  Brier score (resolved): {report['brier_score']:.4f}")
+
+
+def _cmd_benchmark(args):
+    """Dispatch benchmark run."""
+    import os
+    import subprocess
+
+    # Optionally fetch dataset
+    dataset_path = args.dataset
+    if dataset_path.lower() == "dummy":
+        outdir = os.path.expanduser("~/.cache/smf-swarm/benchmarks")
+        os.makedirs(outdir, exist_ok=True)
+        dataset_path = os.path.join(outdir, "dummy.jsonl")
+        if not os.path.exists(dataset_path) or args.fetch:
+            print("Generating dummy benchmark dataset...")
+            subprocess.run([
+                sys.executable, "-m", "scripts.fetch_benchmark_data",
+                "--dummy", "--limit", "200",
+            ], cwd=os.path.dirname(os.path.dirname(__file__)))
+
+    elif not os.path.exists(dataset_path) and args.fetch:
+        print(f"Dataset not found: {dataset_path}")
+        print("Attempting auto-fetch...")
+        # Determine dataset name from path
+        name = os.path.splitext(os.path.basename(dataset_path))[0]
+        subprocess.run([
+            sys.executable, "scripts/fetch_benchmark_data.py",
+            "--datasets", name, "--limit", "500",
+        ], cwd=os.path.dirname(os.path.dirname(__file__)))
+
+    if not os.path.exists(dataset_path):
+        print(f"❌ Dataset not found: {dataset_path}")
+        print("  Run: smf-swarm benchmark --dataset dummy")
+        sys.exit(1)
+
+    # Optionally log hardware environment
+    if args.hw_env:
+        import json
+        from pathlib import Path
+        hw_out = os.path.join(args.output_dir, "hw_env.json")
+        print("Logging hardware environment...")
+        subprocess.run([
+            sys.executable, "scripts/log_hw_env.py", "--outfile", hw_out,
+        ], cwd=os.path.dirname(os.path.dirname(__file__)))
+        print(f"  Saved to {hw_out}")
+
+    # Parse modes and multi-samples
+    modes = [m.strip() for m in args.modes.split(",")]
+    multi_samples = [int(ms.strip()) for ms in args.multi_samples.split(",")]
+
+    print(f"\n{'='*60}")
+    print(f"  SMF Swarm Benchmark")
+    print(f"{'='*60}")
+    print(f"  Dataset: {dataset_path}")
+    print(f"  Modes: {modes}")
+    print(f"  Multi-sample: {multi_samples}")
+    print(f"  Max questions: {args.max_questions or 'all'}")
+    print(f"  Output: {args.output_dir}")
+    print(f"{'='*60}\n")
+
+    from smf_swarm.benchmarks.harness import BenchmarkHarness
+
+    harness = BenchmarkHarness(llm_model=args.llm_model)
+    report = harness.run(
+        dataset=dataset_path,
+        modes=modes,
+        multi_samples=multi_samples,
+        output_dir=args.output_dir,
+        max_questions=args.max_questions,
+    )
+
+    print(f"\n{'='*60}")
+    print(f"  Benchmark Complete: {report.benchmark_run_id}")
+    print(f"  Duration: {report.duration_s:.1f}s")
+    print(f"  Questions: {report.total_questions}")
+    print(f"  Report: {args.output_dir}/{report.benchmark_run_id}/report.md")
+    print(f"{'='*60}")

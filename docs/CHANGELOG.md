@@ -7,6 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.5.0] — 2026-04-25
+
+### Added
+- **Benchmark Harness** (`smf-swarm benchmark` CLI)
+  - `src/smf_swarm/benchmarks/harness.py`: `BenchmarkHarness` with `BenchmarkReport` — end-to-end dataset evaluation against canonical JSONL datasets.
+  - Brier score, ECE, MCE, accuracy, precision, recall, F1 per mode.
+  - Naïve baselines: Always 50%, historical base rate, LogReg TF-IDF.
+  - Reliability diagrams via matplotlib (auto-generated per mode).
+  - JSON + Markdown report export with structured tables.
+  - Results persisted to `BacktestStore` under `benchmarks` mode tags.
+- **Dataset Fetcher** (`scripts/fetch_benchmark_data.py`)
+  - Metaculus API v2 with optional `METACULUS_API_TOKEN` authentication.
+  - FiveThirtyEight MLB Elo CSV with multi-URL fallback.
+  - `--dummy` flag for synthetic dataset generation (no network calls).
+  - Canonical JSONL schema: `id, question_text, domain, outcome, resolved_at, source, url`.
+- **Hardware Environment Logger** (`scripts/log_hw_env.py`)
+  - CPU, RAM, GPU, OS, Python version, installed package manifest.
+  - JSON export for reproducible benchmark runs.
+  - Called automatically via `--hw-env` on `smf-swarm benchmark`.
+- **New optional dependency group**: `[benchmark]`
+  - `matplotlib>=3.8.0`, `scikit-learn>=1.3.0`, `requests>=2.31.0`.
+- **New tests:**
+  - `tests/test_benchmark_harness.py` — 14 tests: dataset loading, metrics math, baselines, report formatting.
+  - `tests/test_benchmark_integration.py` — 4 tests: CLI argument parsing, dummy dataset generation, monkeypatched end-to-end run.
+
+### Changed
+- `pyproject.toml`: version bump `1.4.1` → `1.5.0`; added `[benchmark]` extras.
+- `src/smf_swarm/__init__.py`: version bump to `1.5.0`.
+
+---
+
 ## [1.4.1] — 2026-04-24
 
 ### Fixed
