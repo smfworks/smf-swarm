@@ -5,7 +5,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../src"))
 
 def test_import():
     import smf_swarm
-    assert smf_swarm.__version__ == "1.4.0"
+    assert smf_swarm.__version__ == "1.4.1"
 
 def test_config_default():
     from smf_swarm.config import SwarmConfig

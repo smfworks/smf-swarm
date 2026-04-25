@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.4.1] — 2026-04-24
+
+### Fixed
+- **LangGraph `StateGraph.compile()` compatibility** (`src/smf_swarm/pipeline_langgraph.py`)
+  - Removed deprecated `retry=` kwarg from `compile()`; modern LangGraph (≥0.3) applies retry policies per-node via `add_node(retry_policy=...)`.
+  - Fixes `TypeError: compile() got unexpected keyword argument 'retry'` on current LangGraph stable.
+- **Test suite green** — 4 auto-generated test bugs fixed:
+  - Missing `import pytest` in 4 test files (collection failure).
+  - `graph.draw_mermaid()` → `graph.get_graph().draw_mermaid()` (API path change).
+  - MagicMock auto-creation of `_debate` attribute neutralized (`p._debate = None` in fixture).
+  - Unknown-node timing test corrected (early return means no `node_timings` entry).
+- **Version bump**: `1.4.0` → `1.4.1`.
+
+### Security
+- No dependency changes.
+
+---
+
 ## [1.4.0] — 2026-04-24
 
 ### Added
