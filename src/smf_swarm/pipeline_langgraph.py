@@ -370,7 +370,7 @@ class LangGraphPipeline:
             metadata={
                 **latest_state,
                 "langgraph": True,
-                "version": "1.4.0",
+                "version": "1.6.0",
             },
         )
 

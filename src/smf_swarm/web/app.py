@@ -31,7 +31,7 @@ def create_app() -> Flask:
     # SPA catch-all: serve index.html for non-API, non-static routes
     @app.route("/health")
     def health():
-        return {"status": "ok", "version": "1.4.0"}
+        return {"status": "ok", "version": "1.6.0"}
 
     @app.route("/")
     def index():
