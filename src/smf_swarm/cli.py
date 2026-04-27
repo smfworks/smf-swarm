@@ -106,6 +106,10 @@ Examples:
     p_bench.add_argument("--fetch", action="store_true", help="Auto-fetch dataset if not found")
     p_bench.add_argument("--hw-env", action="store_true", help="Log hardware environment before running")
     p_bench.add_argument("--llm-model", default="", help="LLM model name for report metadata")
+    p_bench.add_argument("--conformal", action="store_true", help="Enable conformal prediction (split calibration)")
+    p_bench.add_argument("--conformal-alpha", type=float, default=0.05, help="Miscoverage rate for conformal prediction (default 0.05)")
+    p_bench.add_argument("--conformal-cal-ratio", type=float, default=0.7, help="Fraction of data used for calibration (default 0.7)")
+    p_bench.add_argument("--reliability-bins", type=int, default=10, help="Number of bins for reliability diagrams")
 
     args = parser.parse_args(argv)
     if not args.cmd:
@@ -363,6 +367,8 @@ def _cmd_benchmark(args):
     print(f"  Multi-sample: {multi_samples}")
     print(f"  Max questions: {args.max_questions or 'all'}")
     print(f"  Output: {args.output_dir}")
+    if args.conformal:
+        print(f"  Conformal: α={args.conformal_alpha} | cal_ratio={args.conformal_cal_ratio}")
     print(f"{'='*60}\n")
 
     from smf_swarm.benchmarks.harness import BenchmarkHarness
@@ -374,11 +380,15 @@ def _cmd_benchmark(args):
         multi_samples=multi_samples,
         output_dir=args.output_dir,
         max_questions=args.max_questions,
+        conformal_alpha=args.conformal_alpha if hasattr(args, 'conformal') and args.conformal else None,
+        conformal_cal_ratio=args.conformal_cal_ratio if hasattr(args, 'conformal_cal_ratio') else 0.7,
     )
 
     print(f"\n{'='*60}")
     print(f"  Benchmark Complete: {report.benchmark_run_id}")
     print(f"  Duration: {report.duration_s:.1f}s")
     print(f"  Questions: {report.total_questions}")
+    if hasattr(args, 'conformal') and args.conformal:
+        print(f"  Conformal: coverage target {1-args.conformal_alpha:.0%} | margin q̂={report.metrics.get('standard',{}).get('cp_margin','N/A')}")
     print(f"  Report: {args.output_dir}/{report.benchmark_run_id}/report.md")
     print(f"{'='*60}")

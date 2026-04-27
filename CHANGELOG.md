@@ -7,6 +7,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.6.0] — 2026-04-27
+
+### Added
+- **Conformal Prediction** (`src/smf_swarm/conformal.py`)
+  - `ConformalPredictor` class implementing **split conformal prediction** (Angelopoulos & Bates, 2023).
+  - Non-conformity scores: `s_i = 1 − p̂_y_i` with `┌(n+1)(1−α)/n┐` quantile threshold `q̂`.
+  - `ConformalInterval` dataclass: `low`, `high`, `margin`, `coverage_target`, `prediction_set`, `label`.
+  - `coverage_score()` — empirical test-set marginal coverage validation.
+  - `adaptive_binning()` — per-bin local `q̂` with underpopulation fallback to global threshold (minimum 5 samples per bin).
+  - Optional MAPIE wrapper (`fit_mapie()`, `predict_mapie()`) via `[conformal]` extras (`pip install smf-swarm[conformal]`).
+- **Conformal integration in BenchmarkHarness**
+  - `BenchmarkHarness.run(..., conformal_alpha, conformal_cal_ratio)` — split calibration/test set for conformal evaluation.
+  - Calibration split runs automatically with `mode="standard"` to fit `ConformalPredictor` on hold-out data.
+  - Per-mode conformal metrics reported: `cp_empirical_coverage`, `cp_coverage_target`, `cp_mean_width`, `cp_margin`.
+  - Markdown reports auto-extend table with coverage and width columns when conformal is enabled.
+- **CLI conformal flags**
+  - `smf-swarm benchmark --conformal`
+  - `smf-swarm benchmark --conformal-alpha 0.05`
+  - `smf-swarm benchmark --conformal-cal-ratio 0.7`
+
+### Changed
+- `pyproject.toml`: version bump `1.5.0` → `1.6.0`; added `[conformal]` extras (`mapie>=0.8.0`).
+- `src/smf_swarm/benchmarks/harness.py`: extended `BenchmarkReport` with `conformal_alpha` and `conformal_cal_ratio` fields.
+- `docs/ARCHITECTURE.md`: updated module tree to include `conformal.py`.
+
+### Tests
+- `tests/test_conformal.py` — 19 tests covering:
+  - Dataclass properties (`width`, `is_certain`, `label`).
+  - Empty calibration, length mismatch, tied scores, extreme α.
+  - Interval predictions for "yes", "no", "uncertain" regions.
+  - Empirical marginal coverage ≥ target on 5× synthetic well-calibrated splits.
+  - Adaptive binning underpopulation fallback.
+  - MAPIE integration (conditionally skipped if MAPIE not installed).
+
+---
+
 ## [1.5.0] — 2026-04-25
 
 ### Added

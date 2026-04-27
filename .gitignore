@@ -1,1 +1,5 @@
 *.pyc\n__pycache__/\nsmf_predict_bridge.py
+.pyc
+__pycache__/
+*.pyo
+.pytest_cache/

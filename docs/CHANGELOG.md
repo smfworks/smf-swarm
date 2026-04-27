@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.6.0] — 2026-04-27
+
+### Added
+- **Conformal Prediction** (`src/smf_swarm/conformal.py`)
+  - `ConformalPredictor` class implementing split conformal prediction with non-conformity scores `s_i = 1 − p̂_y_i`.
+  - `ConformalInterval` dataclass: calibrated `low`/`high` bounds, `margin`, `label` (yes/no/uncertain).
+  - `coverage_score()` for empirical marginal coverage validation against test sets.
+  - `adaptive_binning()` with underpopulation fallback to global `q̂`.
+  - Optional MAPIE wrapper via `[conformal]` extras.
+- **BenchmarkHarness integration** — `run(..., conformal_alpha, conformal_cal_ratio)` with automatic calibration split, per-mode CP metrics in JSON + Markdown reports.
+- **CLI flags**: `--conformal`, `--conformal-alpha`, `--conformal-cal-ratio`.
+
+### Tests
+- `tests/test_conformal.py` — 19 tests: dataclass properties, edge cases, empirical coverage validation, adaptive binning, MAPIE integration.
+
+---
+
 ## [1.5.0] — 2026-04-25
 
 ### Added

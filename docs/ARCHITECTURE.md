@@ -167,6 +167,8 @@ smf_swarm/
 ├── benchmarks/           # Optional: Benchmark harness (v1.5+)
 │   ├── __init__.py
 │   └── harness.py        # BenchmarkHarness, BenchmarkReport, metric computation
+├── conformal.py          # Optional: Split conformal prediction (v1.6+)
+│                         # ConformalPredictor, ConformalInterval, coverage_score, adaptive_binning
 ├── cli.py               # Terminal entry point: smf-swarm command
 ├── cli_rich.py          # Optional rich dashboard (--rich flag)
 ├── structured.py        # Pydantic-validated JSON + regex extraction
