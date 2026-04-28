@@ -31,16 +31,27 @@ Built by [SMF Works](https://smfworks.com). MIT licensed. Open source.
 | **Structured Output** | Pydantic-validated JSON extraction for confidence, validation, features, and sentiment. Hardened regex fallback for non-compliant models. |
 | **Response Caching** | Disk-based LLM query cache with SHA-256 keyed by query+config+mode. TTL default 24 h. Repeat experiments bypass all LLM calls. `--no-cache` to force fresh runs. |
 | **Parallel Debate** | Optimist and Skeptic openings run concurrently via `ThreadPoolExecutor` for ~30–40 % debate speedup. |
-| **Docker Ready** | `Dockerfile` + `docker-compose.yml` for one-command deployment with Ollama sidecar. |
-| **Secure Config** | Optional OS keyring integration for API keys. Config file is `chmod 0o600` on every save. |
+| **Docker Ready** | `Dockerfile` + `docker-compose.yml` for one-command deployment with Ollama sidecar. Windows, macOS, Linux. |
+| **Secure Config** | Optional OS keyring integration for API keys. Config file permissions hardened on every save. |
+| **Cross-Platform** | Native install on macOS, Linux, and Windows (PowerShell installer + `pip`). |
 
 ---
 
-## 🚀 One-Line Install (macOS / Linux)
+## 🚀 One-Line Install
+
+### macOS / Linux (bash)
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/smfworks/smf-swarm/main/install.sh | bash
 ```
+
+### Windows (PowerShell)
+
+```powershell
+iwr -useb https://raw.githubusercontent.com/smfworks/smf-swarm/main/install.ps1 | iex
+```
+
+> **Note:** Use Windows Terminal or PowerShell 7+ for the best CLI experience. Legacy `cmd.exe` users: download `install.bat` instead.
 
 After install, run the configuration wizard:
 

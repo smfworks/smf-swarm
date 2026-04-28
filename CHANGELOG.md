@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.7.2] — 2026-04-28
+
+### Added — Windows Support
+- **`install.ps1`** — PowerShell one-line installer for Windows.
+- **`install.bat`** — Legacy `cmd.exe` fallback.
+- **`src/smf_swarm/platform_paths.py`** — Cross-platform path resolution:
+  - `default_cache_dir()` → `%LOCALAPPDATA%\SMF-Swarm\Cache` or `~/.cache/smf-swarm`
+  - `default_config_dir()` → `%APPDATA%\SMF-Swarm` or `~/.config/smf-swarm`
+  - `default_data_dir()` → `%LOCALAPPDATA%\SMF-Swarm\Data` or `~/.local/share/smf-swarm`
+
+### Changed
+- All hardcoded `~/.cache/`, `~/.config/`, `~/.local/share/` paths migrated through `platform_paths.py`.
+- **`detector.py`** — Added Windows `_win32_mem()`, `_win32_vram()`, `_win32_gpu_name()` via `ctypes` + `wmic`.
+- **`log_hw_env.py`** — Full Windows CPU/RAM/GPU detection via `wmic` + `ctypes`.
+- **`README.md`** — Windows PowerShell install one-liner.
+
+---
+
 ## [1.7.0] — 2026-04-28
 
 ### Fixed — MAPIE v1.3 Compatibility

@@ -14,6 +14,14 @@ from dataclasses import dataclass
 from typing import Optional
 
 
+def _try_import_psutil():
+    try:
+        import psutil
+        return psutil
+    except Exception:
+        return None
+
+
 @dataclass
 class HardwareProfile:
     """Snapshot of available hardware."""
@@ -49,20 +57,54 @@ def detect_hardware() -> HardwareProfile:
 
 def _detect_ram_total() -> float:
     """Total system RAM in GB."""
-    try:
-        import psutil
-        return psutil.virtual_memory().total / (1024 ** 3)
-    except Exception:
-        return _get_meminfo("MemTotal") or _sysctl_mem() or 8.0
+    psutil = _try_import_psutil()
+    if psutil:
+        try:
+            return psutil.virtual_memory().total / (1024 ** 3)
+        except Exception:
+            pass
+    if sys.platform == "win32":
+        return _win32_mem() or 8.0
+    return _get_meminfo("MemTotal") or _sysctl_mem() or 8.0
 
 
 def _detect_ram_available() -> float:
     """Currently available RAM in GB."""
+    psutil = _try_import_psutil()
+    if psutil:
+        try:
+            return psutil.virtual_memory().available / (1024 ** 3)
+        except Exception:
+            pass
+    if sys.platform == "win32":
+        return _win32_mem() or (_detect_ram_total() * 0.5)
+    return _get_meminfo("MemAvailable") or (_detect_ram_total() * 0.5)
+
+
+def _win32_mem() -> Optional[float]:
+    """Windows RAM via ctypes (no external deps)."""
     try:
-        import psutil
-        return psutil.virtual_memory().available / (1024 ** 3)
+        import ctypes
+        kernel32 = ctypes.windll.kernel32
+        class MEMORYSTATUSEX(ctypes.Structure):
+            _fields_ = [
+                ("dwLength", ctypes.c_ulong),
+                ("dwMemoryLoad", ctypes.c_ulong),
+                ("ullTotalPhys", ctypes.c_ulonglong),
+                ("ullAvailPhys", ctypes.c_ulonglong),
+                ("ullTotalPageFile", ctypes.c_ulonglong),
+                ("ullAvailPageFile", ctypes.c_ulonglong),
+                ("ullTotalVirtual", ctypes.c_ulonglong),
+                ("ullAvailVirtual", ctypes.c_ulonglong),
+                ("ullAvailExtendedVirtual", ctypes.c_ulonglong),
+            ]
+        mem = MEMORYSTATUSEX()
+        mem.dwLength = ctypes.sizeof(mem)
+        kernel32.GlobalMemoryStatusEx(ctypes.byref(mem))
+        return mem.ullTotalPhys / (1024 ** 3)
     except Exception:
-        return _get_meminfo("MemAvailable") or (_detect_ram_total() * 0.5)
+        pass
+    return None
 
 
 def _get_meminfo(key: str) -> Optional[float]:
@@ -97,24 +139,66 @@ def _detect_cpu_cores() -> int:
 
 
 def _detect_cpu_threads() -> int:
-    try:
-        import psutil
-        return psutil.cpu_count(logical=True) or _detect_cpu_cores()
-    except Exception:
-        return _detect_cpu_cores()
+    psutil = _try_import_psutil()
+    if psutil:
+        try:
+            return psutil.cpu_count(logical=True) or _detect_cpu_cores()
+        except Exception:
+            pass
+    return _detect_cpu_cores()
 
 
 # ── GPU / VRAM ───────────────────────────────────
 
 def _detect_vram() -> Optional[float]:
-    return _nvidia_vram() or _amd_vram() or _apple_vram()
+    return _nvidia_vram() or _amd_vram() or _apple_vram() or _win32_vram()
 
 
 def _detect_gpu_name() -> Optional[str]:
-    for func in (_nvidia_name, _amd_name, _apple_name):
+    for func in (_nvidia_name, _amd_name, _apple_name, _win32_gpu_name):
         name = func()
         if name:
             return name
+    return None
+
+
+def _win32_vram() -> Optional[float]:
+    """Windows GPU VRAM via wmic."""
+    if sys.platform != "win32":
+        return None
+    try:
+        result = subprocess.run(
+            ["wmic", "path", "Win32_VideoController", "get", "AdapterRAM", "/value"],
+            capture_output=True, text=True, timeout=5, shell=True,
+        )
+        if result.returncode == 0:
+            match = re.search(r"AdapterRAM=(\d+)", result.stdout)
+            if match:
+                bytes_val = int(match.group(1))
+                # Handle signed int32 wrap-around for >2GB (wmic quirk)
+                if bytes_val < 0:
+                    bytes_val += 2 ** 32
+                return bytes_val / (1024 ** 3)
+    except (FileNotFoundError, subprocess.TimeoutExpired, ValueError):
+        pass
+    return None
+
+
+def _win32_gpu_name() -> Optional[str]:
+    """Windows GPU name via wmic."""
+    if sys.platform != "win32":
+        return None
+    try:
+        result = subprocess.run(
+            ["wmic", "path", "Win32_VideoController", "get", "Name", "/value"],
+            capture_output=True, text=True, timeout=5, shell=True,
+        )
+        if result.returncode == 0:
+            match = re.search(r"Name=(.+)", result.stdout)
+            if match:
+                return match.group(1).strip()
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        pass
     return None
 
 

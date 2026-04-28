@@ -9,7 +9,7 @@ Datasets:
   2. FiveThirtyEight MLB Elo — GitHub raw CSV
   3. (GJOpen requires manual CSV export — documented but not auto-fetched)
 
-Output: ~/.cache/smf-swarm/benchmarks/<dataset>.jsonl
+Output: platform cache dir / smf-swarm / benchmarks / <dataset>.jsonl
 Schema per line: {"id", "question_text", "domain", "outcome", "resolved_at", "source", "url"}
 """
 
@@ -24,6 +24,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Iterator
 
+from smf_swarm.platform_paths import default_cache_dir
+
 try:
     import requests
 except ImportError:
@@ -31,7 +33,7 @@ except ImportError:
     sys.exit(1)
 
 
-DEFAULT_OUTDIR = os.path.expanduser("~/.cache/smf-swarm/benchmarks")
+DEFAULT_OUTDIR = os.path.join(default_cache_dir(), "benchmarks")
 METACULUS_API = "https://www.metaculus.com/api2/questions/"
 FTE_MLB_URLS = [
     "https://raw.githubusercontent.com/fivethirtyeight/data/master/mlb-elo/mlb_elo.csv",

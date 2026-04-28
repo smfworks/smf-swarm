@@ -2,7 +2,7 @@
 
 Handles:
   - Interactive first-run configuration (terminal wizard)
-  - Loading / saving config to ~/.config/smf-swarm/config.yaml
+  - Loading / saving config to a platform-appropriate config directory
   - LLM client factory with any provider
   - Environment variable fallbacks (O_API_KEY, OPENAI_BASE_URL, MODEL_NAME)
   - Optional OS keyring integration for API key storage
@@ -15,6 +15,8 @@ import stat
 from pathlib import Path
 from dataclasses import dataclass, field, asdict
 from typing import Literal, Optional
+
+from smf_swarm.platform_paths import default_config_dir
 
 try:
     import yaml
@@ -34,7 +36,7 @@ from langchain_core.language_models.chat_models import BaseChatModel
 _KEYRING_SERVICE = "smf-swarm"
 _KEYRING_USERNAME = "api_key"
 
-DEFAULT_CONFIG_DIR = Path.home() / ".config" / "smf-swarm"
+DEFAULT_CONFIG_DIR = default_config_dir()
 DEFAULT_CONFIG_FILE = DEFAULT_CONFIG_DIR / "config.yaml"
 ENV_CONFIG_FILE = DEFAULT_CONFIG_DIR / ".env"
 

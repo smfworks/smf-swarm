@@ -8,7 +8,7 @@ Usage:
     from smf_swarm.benchmarks.harness import BenchmarkHarness
     harness = BenchmarkHarness()
     report = harness.run(
-        dataset="~/.cache/smf-swarm/benchmarks/metaculus.jsonl",
+        dataset=default_cache_dir() / "benchmarks" / "metaculus.jsonl",
         modes=["standard", "debate", "full"],
         multi_samples=[1, 5],
         output_dir="benchmark_results/",

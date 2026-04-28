@@ -15,13 +15,15 @@ import os
 import hashlib
 from typing import Optional
 
+from smf_swarm.platform_paths import default_cache_dir
+
 
 class RAGStore:
     """Optional local ChromaDB-backed RAG for SMF Swarm."""
 
     def __init__(self, collection_name: str = "smf_swarm", persist_dir: Optional[str] = None):
         self.collection_name = collection_name
-        self.persist_dir = persist_dir or os.path.expanduser("~/.cache/smf-swarm/rag")
+        self.persist_dir = persist_dir or os.path.join(default_cache_dir(), "rag")
         os.makedirs(self.persist_dir, exist_ok=True)
 
         self._client = None

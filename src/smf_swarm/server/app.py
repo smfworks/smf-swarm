@@ -22,7 +22,7 @@ logger = logging.getLogger("smf_swarm.server")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
-    logger.info("SMF Swarm API server starting — v1.7.0")
+    logger.info("SMF Swarm API server starting — v1.7.2")
     yield
     logger.info("SMF Swarm API server shutting down")
 
@@ -55,7 +55,7 @@ def create_app(
     app = FastAPI(
         title="SMF Swarm API",
         description="Headless prediction, benchmark, and calibration API for SMF Swarm",
-        version="1.7.0",
+        version="1.7.2",
         docs_url="/docs",
         redoc_url="/redoc",
         lifespan=lifespan,

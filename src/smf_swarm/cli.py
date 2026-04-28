@@ -315,7 +315,7 @@ def _cmd_server(args):
     app = create_app(token=args.token, rate_limit=rate_limit)
 
     banner = f"""
-  SMF Swarm API Server  v1.7.0
+  SMF Swarm API Server  v1.7.2
   {'━' * 52}
   Host:     http://{args.host}:{args.port}
   Docs:     http://{args.host}:{args.port}/docs
@@ -376,7 +376,8 @@ def _cmd_benchmark(args):
     # Optionally fetch dataset
     dataset_path = args.dataset
     if dataset_path.lower() == "dummy":
-        outdir = os.path.expanduser("~/.cache/smf-swarm/benchmarks")
+        from smf_swarm.platform_paths import default_cache_dir
+        outdir = os.path.join(default_cache_dir(), "benchmarks")
         os.makedirs(outdir, exist_ok=True)
         dataset_path = os.path.join(outdir, "dummy.jsonl")
         if not os.path.exists(dataset_path) or args.fetch:

@@ -29,8 +29,10 @@ import hashlib
 from datetime import datetime
 from typing import Optional, Sequence
 
+from smf_swarm.platform_paths import default_data_dir
 
-DEFAULT_DB = os.path.expanduser("~/.cache/smf-swarm/backtest.db")
+
+DEFAULT_DB = str(default_data_dir() / "backtest.db")
 
 
 class BacktestStore:

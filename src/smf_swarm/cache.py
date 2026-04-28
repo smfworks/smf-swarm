@@ -12,6 +12,8 @@ from typing import Optional, Any
 
 from langchain_core.messages import AIMessage
 
+from smf_swarm.platform_paths import default_cache_dir
+
 try:
     from diskcache import Cache
     _CACHE_AVAILABLE = True
@@ -26,9 +28,8 @@ class LLMCache:
         self.enabled = enabled and _CACHE_AVAILABLE
         self._cache: Any = None
         if self.enabled:
-            from pathlib import Path
             if cache_dir is None:
-                cache_dir = str(Path.home() / ".cache" / "smf-swarm")
+                cache_dir = str(default_cache_dir())
             self._cache = Cache(cache_dir)
 
     def _make_key(self, messages: list, model: str = "", temperature: float = 0.3, **kwargs) -> str:

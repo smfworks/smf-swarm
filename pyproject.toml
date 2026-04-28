@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "smf-swarm"
-version = "1.7.0"
+version = "1.7.2"
 description = "SMF Swarm — Custom sequential hybrid pipeline with adversarial debate and social calibration layers for agent-powered predictive analysis"
 readme = "README.md"
 license = {text = "MIT"}
@@ -97,6 +97,9 @@ include = [
     "/docs",
     "/examples",
     "/scripts",
+    "/install.sh",
+    "/install.ps1",
+    "/install.bat",
     "/README.md",
     "/LICENSE",
     "/CHANGELOG.md",
