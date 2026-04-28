@@ -169,6 +169,13 @@ smf_swarm/
 │   └── harness.py        # BenchmarkHarness, BenchmarkReport, metric computation
 ├── conformal.py          # Optional: Split conformal prediction (v1.6+)
 │                         # ConformalPredictor, ConformalInterval, coverage_score, adaptive_binning
+├── server/               # Optional: FastAPI headless API server (v1.6+)
+│   ├── app.py             # create_app() factory, router registration
+│   ├── models.py          # Pydantic request/response models
+│   ├── auth.py            # Bearer token + sliding-window rate limiting
+│   ├── async_jobs.py      # SSE streaming over JobRunner events
+│   ├── runner.py          # ServerJobRunner: batch / list / cancel
+│   └── routes_*.py        # /health, /predict, /batch, /benchmark, /calibrate, /jobs
 ├── cli.py               # Terminal entry point: smf-swarm command
 ├── cli_rich.py          # Optional rich dashboard (--rich flag)
 ├── structured.py        # Pydantic-validated JSON + regex extraction

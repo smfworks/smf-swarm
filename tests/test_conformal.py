@@ -86,7 +86,7 @@ def test_predict_interval_before_fit():
 def test_predict_interval_yes(cp_05):
     ci = cp_05.predict_interval(0.95)
     assert 1 in ci.prediction_set
-    assert ci.low >= 1.0 - ci.margin
+    assert ci.low >= 1.0 - ci.margin - 1e-9
     assert ci.coverage_target == 0.95
 
 

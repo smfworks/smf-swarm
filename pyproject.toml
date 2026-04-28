@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "smf-swarm"
-version = "1.6.0"
+version = "1.7.0"
 description = "SMF Swarm — Custom sequential hybrid pipeline with adversarial debate and social calibration layers for agent-powered predictive analysis"
 readme = "README.md"
 license = {text = "MIT"}
@@ -58,6 +58,10 @@ langgraph = [
 ]
 cli = [
     "rich>=13.0.0",
+]
+api = [
+    "fastapi>=0.110.0",
+    "uvicorn>=0.27.0",
 ]
 benchmark = [
     "matplotlib>=3.8.0",

@@ -39,15 +39,28 @@ except ImportError:  # pragma: no cover
 
 
 # ── Optional MAPIE soft dependency ─────────────────────────
-_MAPIE_AVAILABLE = False
+# mapie ≥1.3 renamed MapieClassifier → SplitConformalClassifier,
+# MapieRegressor → SplitConformalRegressor.  Try the new API first,
+# then fall back to the legacy names.
+_MAPIE_AVAILABLE = False  # type: ignore[assignment]
+_MAPIE_CLASSIFIER: type | None = None
+_MAPIE_REGRESSOR: type | None = None
 try:
-    from mapie.classification import MapieClassifier
-    from mapie.regression import MapieRegressor
-
+    from mapie.classification import MapieClassifier as _MAPIE_CLASSIFIER  # type: ignore[assignment]
+    from mapie.regression import MapieRegressor as _MAPIE_REGRESSOR  # type: ignore[assignment]
     _MAPIE_AVAILABLE = True
 except ImportError:
-    MapieClassifier = None  # type: ignore[misc,assignment]
-    MapieRegressor = None  # type: ignore[misc,assignment]
+    pass
+try:
+    from mapie.classification import SplitConformalClassifier as _MAPIE_CLASSIFIER  # type: ignore[assignment]
+    from mapie.regression import SplitConformalRegressor as _MAPIE_REGRESSOR  # type: ignore[assignment]
+    _MAPIE_AVAILABLE = True
+except ImportError:
+    pass
+
+# Backwards-compatible names for any code that still references them
+MapieClassifier = _MAPIE_CLASSIFIER  # type: ignore[misc,assignment]
+MapieRegressor = _MAPIE_REGRESSOR  # type: ignore[misc,assignment]
 
 
 @dataclass(frozen=True)
@@ -292,8 +305,28 @@ class ConformalPredictor:
 
         est = estimator
         est.fit(X_cal, y_cal)
-        self._mapie_clf = MapieClassifier(estimator=est, method=method)
-        self._mapie_clf.fit(X_cal, y_cal)
+
+        cls = _MAPIE_CLASSIFIER
+        if cls is None:
+            raise RuntimeError("MAPIE classifier is not available")  # pragma: no cover
+
+        # MAPIE 1.3+: renamed MapieClassifier → SplitConformalClassifier
+        # and changed the constructor / calibration API.
+        _is_v13 = cls.__name__ == "SplitConformalClassifier"
+        if _is_v13:
+            # mapie ≥1.3:  conformity_score replaces method; fit → conformalize when prefit=True
+            score = "lac" if method == "score" else method
+            self._mapie_clf = cls(
+                estimator=est,
+                confidence_level=round(1.0 - self.alpha, 4),
+                conformity_score=score,
+                prefit=True,
+            )
+            self._mapie_clf.conformalize(X_cal, y_cal)
+        else:
+            # legacy mapie <1.3
+            self._mapie_clf = cls(estimator=est, method=method)
+            self._mapie_clf.fit(X_cal, y_cal)
         return self
 
     def predict_mapie(
@@ -303,19 +336,30 @@ class ConformalPredictor:
         if not _MAPIE_AVAILABLE or not hasattr(self, "_mapie_clf"):
             raise RuntimeError("Call fit_mapie() before predict_mapie()")
         a = alpha if alpha is not None else self.alpha
-        y_pred, y_ps = self._mapie_clf.predict(X_new, alpha=a)
+
+        clf = self._mapie_clf
+        _is_v13 = clf.__class__.__name__ == "SplitConformalClassifier"
+
+        if _is_v13:
+            # mapie ≥1.3: predict_set() returns (y_pred, y_ps) where y_ps may be (n, classes, 1)
+            y_pred, y_ps = clf.predict_set(X_new)
+            if y_ps.ndim == 3:
+                y_ps = y_ps.squeeze(axis=-1)
+        else:
+            y_pred, y_ps = self._mapie_clf.predict(X_new, alpha=a)
 
         intervals = []
         for pred, ps in zip(y_pred, y_ps):
-            # ps shape depends on method; for score method it's (n_samples, 2)
-            set_bits = {int(i) for i, included in enumerate(ps) if included}
-            low = 0.0 if 0 in set_bits else max(0.0, 1.0 - self.q_hat)
-            high = 1.0 if 1 in set_bits else min(1.0, self.q_hat)
+            # ps shape: (n_classes,) bool array
+            set_bits = {int(i) for i, included in enumerate(ps) if bool(included)}
+            q_hat = self.q_hat if self.q_hat is not None else self.alpha
+            low = 0.0 if 0 in set_bits else max(0.0, 1.0 - q_hat)
+            high = 1.0 if 1 in set_bits else min(1.0, q_hat)
             intervals.append(
                 ConformalInterval(
                     low=round(low, 4),
                     high=round(high, 4),
-                    margin=round(self.q_hat, 4) if self.q_hat else 1.0,
+                    margin=round(q_hat, 4),
                     coverage_target=round(1.0 - self.alpha, 4),
                     prediction_set=frozenset(set_bits),
                 )

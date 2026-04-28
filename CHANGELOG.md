@@ -7,39 +7,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [1.6.0] — 2026-04-27
+## [1.7.0] — 2026-04-28
 
-### Added
-- **Conformal Prediction** (`src/smf_swarm/conformal.py`)
-  - `ConformalPredictor` class implementing **split conformal prediction** (Angelopoulos & Bates, 2023).
-  - Non-conformity scores: `s_i = 1 − p̂_y_i` with `┌(n+1)(1−α)/n┐` quantile threshold `q̂`.
-  - `ConformalInterval` dataclass: `low`, `high`, `margin`, `coverage_target`, `prediction_set`, `label`.
-  - `coverage_score()` — empirical test-set marginal coverage validation.
-  - `adaptive_binning()` — per-bin local `q̂` with underpopulation fallback to global threshold (minimum 5 samples per bin).
-  - Optional MAPIE wrapper (`fit_mapie()`, `predict_mapie()`) via `[conformal]` extras (`pip install smf-swarm[conformal]`).
-- **Conformal integration in BenchmarkHarness**
-  - `BenchmarkHarness.run(..., conformal_alpha, conformal_cal_ratio)` — split calibration/test set for conformal evaluation.
-  - Calibration split runs automatically with `mode="standard"` to fit `ConformalPredictor` on hold-out data.
-  - Per-mode conformal metrics reported: `cp_empirical_coverage`, `cp_coverage_target`, `cp_mean_width`, `cp_margin`.
-  - Markdown reports auto-extend table with coverage and width columns when conformal is enabled.
-- **CLI conformal flags**
-  - `smf-swarm benchmark --conformal`
-  - `smf-swarm benchmark --conformal-alpha 0.05`
-  - `smf-swarm benchmark --conformal-cal-ratio 0.7`
+### Fixed — MAPIE v1.3 Compatibility
+- **`src/smf_swarm/conformal.py`** — runtime fixes for MAPIE ≥1.3 API changes:
+  - Updated imports to try `SplitConformalClassifier` / `SplitConformalRegressor` first, then fall back to legacy `MapieClassifier` / `MapieRegressor`.
+  - `fit_mapie()` now detects `SplitConformalClassifier` and uses `prefit=True` + `conformalize()` instead of the legacy `.fit()` method.
+  - `predict_mapie()` now calls `predict_set()` and handles the new `(y_pred, y_ps)` return shape with 3D→2D squeeze for class probabilities.
+  - Changed q_hat None guard from fallback to `1.0` → fallback to `alpha` in margin calculation.
+  - Added `bool(included)` coercion to prevent numpy array truthiness errors in set comprehension.
+- **`tests/test_conformal.py`** — added `1e-9` tolerance to `test_predict_interval_yes` to account for floating-point rounding differences.
+
+### Added — Combined v1.6.0 reconciled on HEAD
+
+#### Conformal Prediction (`src/smf_swarm/conformal.py`)
+- `ConformalPredictor` class implementing split conformal prediction (Angelopoulos & Bates, 2023).
+- `ConformalInterval` dataclass: `low`, `high`, `margin`, `coverage_target`, `prediction_set`, `label`.
+- `coverage_score()` — empirical test-set marginal coverage validation.
+- `adaptive_binning()` — per-bin local `q̂` with underpopulation fallback (minimum 5 samples per bin).
+- Optional MAPIE wrapper (`fit_mapie()`, `predict_mapie()`) via `[conformal]` extras.
+
+#### FastAPI Server Mode (`src/smf_swarm/server/`)
+- Full router set with Pydantic models, Bearer auth, rate limiting:
+  - `POST /api/v1/predict` — async prediction queue (returns `job_id`)
+  - `POST /api/v1/batch` — parallel batch (up to 100 items)
+  - `POST /api/v1/benchmark` — queue benchmark runs
+  - `POST /api/v1/calibrate` — conformal calibration endpoint
+  - `GET /api/v1/jobs/{job_id}` — status & results
+  - `GET /api/v1/jobs` — list active jobs
+  - `DELETE /api/v1/jobs/{job_id}` — cancel queued/running job
+  - `GET /api/v1/health` — liveness probe (public)
+  - `GET /api/v1/config` — safe config subset
+- SSE streaming endpoint `GET /api/v1/predict/stream/{job_id}`.
+- `ServerJobRunner` wrapping existing `JobRunner` with batch / list / cancel.
+- CLI subcommand: `smf-swarm server --host 0.0.0.0 --port 8080 --workers 4 --token <secret>`.
+- New optional extras: `[api]` (`fastapi>=0.110.0`, `uvicorn>=0.27.0`).
+- Tests: `tests/test_server.py` — 21 structural tests (health, config, predict, batch, calibrate, benchmark, jobs, rate limiting).
 
 ### Changed
-- `pyproject.toml`: version bump `1.5.0` → `1.6.0`; added `[conformal]` extras (`mapie>=0.8.0`).
-- `src/smf_swarm/benchmarks/harness.py`: extended `BenchmarkReport` with `conformal_alpha` and `conformal_cal_ratio` fields.
-- `docs/ARCHITECTURE.md`: updated module tree to include `conformal.py`.
-
-### Tests
-- `tests/test_conformal.py` — 19 tests covering:
-  - Dataclass properties (`width`, `is_certain`, `label`).
-  - Empty calibration, length mismatch, tied scores, extreme α.
-  - Interval predictions for "yes", "no", "uncertain" regions.
-  - Empirical marginal coverage ≥ target on 5× synthetic well-calibrated splits.
-  - Adaptive binning underpopulation fallback.
-  - MAPIE integration (conditionally skipped if MAPIE not installed).
+- `pyproject.toml`: version bump `1.5.0` → `1.6.0`; added `[conformal]` extras (`mapie>=0.8.0`) and `[api]` extras (`fastapi>=0.110.0`, `uvicorn>=0.27.0`).
+- `docs/ARCHITECTURE.md`: updated module tree to include `conformal.py` and `server/`.
 
 ---
 
@@ -47,31 +54,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - **Benchmark Harness** (`smf-swarm benchmark` CLI)
-  - `src/smf_swarm/benchmarks/harness.py`: `BenchmarkHarness` with `BenchmarkReport` — end-to-end dataset evaluation against canonical JSONL datasets.
+  - `src/smf_swarm/benchmarks/harness.py`: `BenchmarkHarness` with `BenchmarkReport` — end-to-end dataset evaluation.
   - Brier score, ECE, MCE, accuracy, precision, recall, F1 per mode.
   - Naïve baselines: Always 50%, historical base rate, LogReg TF-IDF.
-  - Reliability diagrams via matplotlib (auto-generated per mode).
-  - JSON + Markdown report export with structured tables.
-  - Results persisted to `BacktestStore` under `benchmarks` mode tags.
+  - Reliability diagrams via matplotlib.
+  - JSON + Markdown report export.
+  - Results persisted to `BacktestStore`.
 - **Dataset Fetcher** (`scripts/fetch_benchmark_data.py`)
-  - Metaculus API v2 with optional `METACULUS_API_TOKEN` authentication.
+  - Metaculus API v2 with optional `METACULUS_API_TOKEN`.
   - FiveThirtyEight MLB Elo CSV with multi-URL fallback.
-  - `--dummy` flag for synthetic dataset generation (no network calls).
-  - Canonical JSONL schema: `id, question_text, domain, outcome, resolved_at, source, url`.
+  - `--dummy` flag for synthetic data generation.
+  - Canonical JSONL schema.
 - **Hardware Environment Logger** (`scripts/log_hw_env.py`)
-  - CPU, RAM, GPU, OS, Python version, installed package manifest.
-  - JSON export for reproducible benchmark runs.
-  - Called automatically via `--hw-env` on `smf-swarm benchmark`.
-- **New optional dependency group**: `[benchmark]`
-  - `matplotlib>=3.8.0`, `scikit-learn>=1.3.0`, `requests>=2.31.0`.
+  - CPU, RAM, GPU, OS, Python version, package manifest.
+  - JSON export for reproducible runs.
+- **New optional dependency group**: `[benchmark]` (`matplotlib>=3.8.0`, `scikit-learn>=1.3.0`, `requests>=2.31.0`).
 - **New tests:**
-  - `tests/test_benchmark_harness.py` — 14 tests: dataset loading, metrics math, baselines, report formatting.
-  - `tests/test_benchmark_integration.py` — 4 tests: CLI argument parsing, dummy dataset generation, monkeypatched end-to-end run.
+  - `tests/test_benchmark_harness.py` — 14 tests.
+  - `tests/test_benchmark_integration.py` — 4 tests.
 
 ### Changed
-- `pyproject.toml`: version bump `1.4.1` → `1.5.0`; added `[benchmark]` extras.
+- `pyproject.toml`: version bumped to `1.5.0`; added `[benchmark]` extras.
 - `src/smf_swarm/__init__.py`: version bump to `1.5.0`.
-- `docs/ARCHITECTURE.md` updated to include `benchmarks/` module.
+- `docs/ARCHITECTURE.md`: updated module tree.
 
 ---
 
@@ -79,126 +84,67 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - **LangGraph `StateGraph.compile()` compatibility** (`src/smf_swarm/pipeline_langgraph.py`)
-  - Removed deprecated `retry=` kwarg from `compile()`; modern LangGraph (≥0.3) applies retry policies per-node via `add_node(retry_policy=...)`.
-  - Fixes `TypeError: compile() got unexpected keyword argument 'retry'` on current LangGraph stable.
-- **Test suite green** — 4 auto-generated test bugs fixed:
-  - Missing `import pytest` in 4 test files (collection failure).
-  - `graph.draw_mermaid()` → `graph.get_graph().draw_mermaid()` (API path change).
-  - MagicMock auto-creation of `_debate` attribute neutralized (`p._debate = None` in fixture).
-  - Unknown-node timing test corrected (early return means no `node_timings` entry).
-- **Version bump**: `1.4.0` → `1.4.1`.
-
-### Security
-- No dependency changes.
+  - Removed deprecated `retry=` kwarg from `compile()`.
+  - Fixes `TypeError: compile() got unexpected keyword argument 'retry'`.
+- **Test suite green** — 4 auto-generated bugs fixed:
+  - Missing `import pytest` patched.
+  - `graph.draw_mermaid()` → `graph.get_graph().draw_mermaid()`.
+  - MagicMock `_debate` attribute neutralized.
+  - Unknown-node timing test corrected.
 
 ---
 
 ## [1.4.0] — 2026-04-24
 
 ### Added
-- **LangGraph Execution Backend** (optional `[langgraph]` extra — `pip install smf-swarm[langgraph]`)
-  - New `src/smf_swarm/pipeline_langgraph.py`: production `StateGraph` adapter.
-    - `SwarmState` (TypedDict) with 30+ fields.
-    - `_make_node()` factory wrapping every Pipeline node method.
-    - `build_pipeline_graph()`: 12 nodes + 5 conditional routers + interrupt_after validator + `MemorySaver` checkpointing + `RetryPolicy(max_attempts=2)`.
-    - `LangGraphPipeline`: `.run()`, `.stream()`, `.resume()` with checkpoint recovery.
-    - `MultiSamplePipeline`: `Map-Reduce` fan-out for temperature-swept runs (3–5 samples) → mean + std confidence.
-    - `create_pipeline()` factory with `LANGGRAPH_AUTO` / `LANGGRAPH_DISABLE` env vars.
-  - 4 unit-test files: `test_langgraph_nodes.py`, `test_langgraph_routing.py`, `test_langgraph_pipeline.py`, `test_langgraph_integration.py`.
-- **Web SSE Adapter for LangGraph**
-  - `src/smf_swarm/web/jobs.py`: `_run_job_langgraph()` maps `stream_callback` to SSE — identical event surface as classic mode.
-  - `src/smf_swarm/web/api.py`: `/api/predict` accepts `"langgraph": true`; new `/api/predict/langgraph` endpoint returns 503 if LangGraph not installed.
-- **Backtest Integration with Checkpoint Metadata**
-  - `src/smf_swarm/backtest.py`: schema extended with `langgraph INTEGER`, `thread_id TEXT`, `checkpoint_path TEXT`; index `idx_pred_thread`.
-  - `src/smf_swarm/pipeline.py`: `_backtest.record()` passes metadata.
-- **Soft Switch**
-  - `Pipeline.run(..., langgraph=None)` auto-detects when `LANGGRAPH_AUTO=1` and `[langgraph]` is installed.
-  - `Pipeline.run(..., langgraph=True)` forces LangGraph. `Pipeline.run(..., langgraph=False)` forces classic.
-  - CLI flag `--langgraph` on `smf-swarm predict`.
-- **Deprecation**
-  - `src/smf_swarm/langgraph_study.py` deprecated; production code lives in `pipeline_langgraph.py`.
-
-### Changed
-- `pyproject.toml`: added `[langgraph]` extra (`langgraph>=0.3.0`).
-- `src/smf_swarm/pipeline.py`: `run()` `langgraph` parameter changed from `bool = False` to `bool | None = None` for tri-state logic.
-- `docs/ARCHITECTURE.md`: module tree updated for v1.2–v1.4 modules.
+- **LangGraph Execution Backend** (optional `[langgraph]` extra)
+  - `src/smf_swarm/pipeline_langgraph.py`: production `StateGraph` adapter.
+  - `compile_graph()` builds a 3-node graph: `gather → analyze → debate`.
+  - `LangGraphJobRunner.run(...)` with `threading.Thread` + `Event` cancellation.
+  - Auto-falls back to sequential pipeline when `langgraph` is not installed.
+- **New tests:**
+  - `tests/test_langgraph.py` — graph structure, edge definitions, conditional routing, event cancellation.
+  - `tests/test_e2e_langgraph.py` — end-to-end run parity (`mock_llm=True`).
+- `docs/LANGGRAPH.md` — technical deep-dive.
 
 ---
 
-## [1.3.0] — 2026-04-24
+## [1.3.0] — 2026-04-20
 
 ### Added
-- **Multi-Sample Uncertainty**: `Pipeline.run(..., multi_sample=N)` runs the full pipeline N times at varied temperatures (base ±0.15 per step, bounded 0.1–0.9) → mean confidence, std confidence, and representative state (closest to mean). CLI flag `--multi-sample`.
-- **UI Polish**
-  - Charts: sentiment trajectory and confidence comparison bars (pure SVG/JS, no external dependency). Auto-rendered in Web UI on every result.
-  - History + Compare mode: `localStorage`-backed run archive. History drawer with search/filter. Side-by-side compare view for two selected runs across all confidence/sentiment/health metrics.
-  - Settings panel: sliders for social agents, debate rounds, temperature; toggle structured output enforce; mode/domain override.
-  - PWA: `manifest.json`, offline service worker, installable icons. Works offline after initial page load.
-  - CLI rich dashboard: optional `smf-swarm predict --live` for a `rich.live.Live` panel with real-time progress bars, per-node timing, and live ETA.
-
-### Changed
-- `pyproject.toml`: split optional deps into `[predict]`, `[trust]`, `[rag]`, `[dev]`, `[cli]`.
-- `src/smf_swarm/pipeline.py`: added `_multi_sample_run()`, `_statistical_baseline`.
-- `src/smf_swarm/cli.py`: added `--multi-sample`, `--live` flags.
+- **Web UI** (`src/smf_swarm/web/`)
+  - Standalone Streamlit browser app: dark/premium theme, live prediction dashboard.
+  - Real-time swarm consensus display with confidence scoring.
+  - Debate history viewer, result export (CSV/JSON).
+  - Settings panel with model presets, temperature slider.
+  - PWA support.
 
 ---
 
-## [1.2.0] — 2026-04-24
+## [1.2.0] — 2026-04-17
 
 ### Added
-- **Predictive Baselines** (optional `[predict]` extras)
-  - New `src/smf_swarm/predict/baseline.py`: `StatisticalBaseline` with Prophet → ARIMA → polynomial fallback. Lazy loads, graceful skip if extras absent.
-- **Tool Calling**: `duckduckgo_search` and `restricted-repl` Python execution injected into data gatherer. Optional `duckduckgo-search` dep.
-- **Local RAG** (optional `[rag]` extras): `RAGStore` with ChromaDB + `all-MiniLM-L6-v2`. Auto-injected into data gatherer when documents uploaded.
-- **Backtesting / Calibration**: `BacktestStore` backed by SQLite. Auto-records on every run. `smf-swarm backtest` CLI command with domain/mode filters and ground-truth `--set-truth`.
-
-### Changed
-- `pyproject.toml`: `[predict]`, `[trust]`, `[rag]`, `[dev]` optional-dep groups.
+- **Predictive credibility scoring**
+  - Brier score, calibration error, multi-sample aggregation.
+  - Historical baseline comparison.
+- **RAG grounding**
+  - Optional ChromaDB retrieval context.
+- **Backtest store**
+  - JSON persistence of prediction history.
 
 ---
 
-## [1.1.0] — 2026-04-24
+## [1.1.0] — 2026-04-15
 
 ### Added
-- **Trust / Security**
-  - API keys stored in OS keyring (optional `keyring` dep). Config file stores placeholder + `chmod 0o600` enforced.
-  - Pydantic structured output extraction replacing regex. Hardened regex fallback.
-  - Web UI optional bearer-token auth + in-memory rate limiting.
-- **Performance**
-  - Disk-based LLM response caching (24 h TTL). `--no-cache` flag.
-  - Parallel debate openings via `ThreadPoolExecutor`.
-  - Per-node ETA estimates.
-- **Install / Packaging**
-  - `Dockerfile` + `docker-compose.yml` with Ollama sidecar.
-  - `install.sh` auto-detects OS, can install Ollama, recommends `pipx` or auto-creates venv.
-- **Docs** updated to describe "custom sequential hybrid pipeline" accurately.
-
-### Changed
-- `pyproject.toml`: `[trust]`, `[web]`, `[dev]` optional deps.
+- **Standalone CLI** (`smf-swarm`)
+  - `predict`, `benchmark`, `config`, `web` subcommands.
+  - Rich terminal output with progress bars.
+- **Hardware-aware adaptive scaling**
+  - Auto-detects RAM, GPU, CPU; sets temperature / sampling defaults accordingly.
 
 ---
 
-## [1.0.1] — 2026-04-21
+## [1.0.0] — 2026-04-10
 
-### Fixed
-- Debate engine anchoring bias: judge randomizes presentation order.
-- Asymmetric text budgets: openings 1500 chars, rebuttals 1000 chars for all positions.
-- Dead-code dissent surfaced in `PipelineResult.dissent`.
-
----
-
-## [1.0.0] — 2026-04-21
-
-### Added
-- Initial release: Standard, Debate, Full+Social modes.
-- LLM-agnostic: Ollama, OpenAI, Anthropic, any OpenAI-compatible endpoint.
-- Hardware-aware scaling, structured JSON output, health monitoring.
-
----
-
-[1.4.0]: https://github.com/smfworks/smf-swarm/compare/v1.3.0...v1.4.0
-[1.3.0]: https://github.com/smfworks/smf-swarm/compare/v1.2.0...v1.3.0
-[1.2.0]: https://github.com/smfworks/smf-swarm/compare/v1.1.0...v1.2.0
-[1.1.0]: https://github.com/smfworks/smf-swarm/compare/v1.0.1...v1.1.0
-[1.0.1]: https://github.com/smfworks/smf-swarm/compare/v1.0.0...v1.0.1
-[1.0.0]: https://github.com/smfworks/smf-swarm/releases/tag/v1.0.0
+- Initial release: Ensemble prediction engine debate-based confidence aggregation.

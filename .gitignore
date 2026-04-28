@@ -3,3 +3,4 @@
 __pycache__/
 *.pyo
 .pytest_cache/
+uv.lock

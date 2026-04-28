@@ -88,6 +88,15 @@ Examples:
     # ── config ───────────────────────────────────
     sub.add_parser("config", help="Show current configuration")
 
+    # ── server ──────────────────────────────────────
+    p_server = sub.add_parser("server", help="Launch the FastAPI headless API server")
+    p_server.add_argument("--port", type=int, default=8080, help="Port to bind (default: 8080)")
+    p_server.add_argument("--host", type=str, default="127.0.0.1", help="Host to bind (default: 127.0.0.1)")
+    p_server.add_argument("--token", type=str, default=None, help="Optional bearer token for API auth")
+    p_server.add_argument("--rate-limit", dest="rate_limit", type=int, nargs=2, metavar=("COUNT", "SECONDS"),
+                         default=None, help="Rate limit API requests per IP (e.g. --rate-limit 10 60)")
+    p_server.add_argument("--workers", type=int, default=1, help="Number of worker processes (default: 1)")
+
     # ── web ───────────────────────────────────────
     p_web = sub.add_parser("web", help="Launch the web UI server")
     p_web.add_argument("--port", type=int, default=8080, help="Port to bind (default: 8080)")
@@ -133,6 +142,8 @@ Examples:
         _cmd_config()
     elif args.cmd == "web":
         _cmd_web(args)
+    elif args.cmd == "server":
+        _cmd_server(args)
     elif args.cmd == "benchmark":
         _cmd_benchmark(args)
 
@@ -283,6 +294,52 @@ def _cmd_web(args):
     from smf_swarm.web.app import run_server
     rate_limit = tuple(args.rate_limit) if args.rate_limit else None
     run_server(host=args.host, port=args.port, auth_token=args.token, rate_limit=rate_limit)
+
+
+def _cmd_server(args):
+    """Boot the FastAPI server via uvicorn."""
+    import sys
+    try:
+        import uvicorn
+    except ImportError as exc:
+        print("=" * 60)
+        print("  ERROR: FastAPI / Uvicorn not installed.")
+        print("  Install server dependencies:")
+        print("    pip install 'smf-swarm[api]'")
+        print("=" * 60)
+        sys.exit(1)
+
+    from smf_swarm.server import create_app
+
+    rate_limit = tuple(args.rate_limit) if args.rate_limit else None
+    app = create_app(token=args.token, rate_limit=rate_limit)
+
+    banner = f"""
+  SMF Swarm API Server  v1.7.0
+  {'━' * 52}
+  Host:     http://{args.host}:{args.port}
+  Docs:     http://{args.host}:{args.port}/docs
+"""
+    if args.token:
+        banner += "  Auth:     Bearer token required\n"
+    if rate_limit:
+        banner += f"  Rate:     {rate_limit[0]} req / {rate_limit[1]}s\n"
+    banner += f"  Workers:  {args.workers}\n"
+    if args.host == "0.0.0.0":
+        banner += "  ⚠ WARNING: Binding to 0.0.0.0 exposes this server to the network.\n"
+        if not args.token:
+            banner += "  ⚠ WARNING: No auth token set. Anyone on your network can access this.\n"
+    banner += f"  Press Ctrl+C to stop\n  {'━' * 52}"
+    print(banner)
+    sys.stdout.flush()
+
+    uvicorn.run(
+        "smf_swarm.server:create_app",
+        host=args.host,
+        port=args.port,
+        workers=args.workers,
+        factory=True,
+    )
 
 
 def _cmd_backtest(args):
