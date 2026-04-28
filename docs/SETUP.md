@@ -29,11 +29,21 @@ If it says "command not found" or shows `3.9.x`, install Python:
 
 ## Step 2: Install SMF Swarm
 
-### Option A: One-line install (macOS / Linux)
+### Option A: One-line install
+
+**macOS / Linux (bash):**
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/smfworks/smf-swarm/main/install.sh | bash
 ```
+
+**Windows (PowerShell):**
+
+```powershell
+iwr -useb https://raw.githubusercontent.com/smfworks/smf-swarm/main/install.ps1 | iex
+```
+
+> Use Windows Terminal or PowerShell 7+ for the best CLI experience. Legacy `cmd.exe` users: download `install.bat` instead.
 
 This downloads and installs `smf-swarm` and its dependencies automatically.
 
@@ -162,9 +172,9 @@ The wizard will ask you 5 questions. Here's what to type for each path:
 | API key | Paste your key |
 | Default mode | `2` (Debate) or `3` (Full) |
 
-**What the wizard actually does:** It creates a file at
-`~/.config/smf-swarm/config.yaml` with your settings. You can edit this file
-later with any text editor.
+**What the wizard actually does:** It creates a platform-appropriate config file —
+`~/.config/smf-swarm/config.yaml` on macOS/Linux or `%APPDATA%\SMF-Swarm\config.yaml` on Windows —
+with your settings. You can edit this file later with any text editor.
 
 ---
 
@@ -227,11 +237,8 @@ NVIDIA's trajectory toward a $4 trillion valuation...
 - Run `ollama pull llama3.3` (or your chosen model) before using it.
 
 ### "Empty predictions" or timeouts
-- Increase timeout in config:
-  ```bash
-  nano ~/.config/smf-swarm/config.yaml
-  ```
-  Change `timeout: 180` to `timeout: 300`.
+- Increase timeout in config (macOS/Linux: `nano ~/.config/smf-swarm/config.yaml`, Windows: open `%APPDATA%\SMF-Swarm\config.yaml`):
+- Change `timeout: 180` to `timeout: 300`.
 
 ### "Permission denied" when running install
 - Make sure Python is in your PATH.

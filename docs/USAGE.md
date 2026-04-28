@@ -12,7 +12,7 @@ Run the first-time interactive configuration wizard.
 smf-swarm configure
 ```
 
-Creates `~/.config/smf-swarm/config.yaml` with your LLM settings.
+Creates a platform-appropriate config file — `~/.config/smf-swarm/config.yaml` (macOS/Linux) or `%APPDATA%\SMF-Swarm\config.yaml` (Windows) — with your LLM settings.
 
 ---
 

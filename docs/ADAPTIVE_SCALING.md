@@ -169,7 +169,8 @@ prompt. See §6 for the prompt format.
 ## 5. Profile Schema (YAML)
 
 ```yaml
-# ~/.config/smf-swarm/config.yaml (excerpt after profiling)
+# Platform config file [1.7.2+ uses %APPDATA%\SMF-Swarm\config.yaml on Windows]
+# Excerpt after profiling:
 swarm:
   profile: balanced
   profile_locked: true  # user must --force-reprofile to reset
@@ -260,7 +261,7 @@ src/smf_swarm/
 |`detector.py`|Cross-platform hardware detection. Pure functions — no side effects.|
 |`registry.py`|Immutable profile definitions. Filter logic. No I/O.|
 |`prompter.py`|User interaction. Blocks until choice made. Returns chosen profile name.|
-|`configurator.py`|Side-effect: reads/writes `~/.config/smf-swarm/config.yaml`. Applies chosen profile.|
+|`configurator.py`| Side-effect: reads/writes `~/.config/smf-swarm/config.yaml` (macOS/Linux) or `%APPDATA%\SMF-Swarm\config.yaml` (Windows). Applies chosen profile. |
 
 ### Integration Points
 

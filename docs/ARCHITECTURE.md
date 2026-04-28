@@ -198,7 +198,7 @@ smf_swarm/
 
 ## 5. Config System
 
-**File:** `~/.config/smf-swarm/config.yaml`  \
+**File:** `~/.config/smf-swarm/config.yaml` (macOS/Linux) or `%APPDATA%\SMF-Swarm\config.yaml` (Windows)  \
 **Created by:** `smf-swarm configure` wizard  \
 **Overridden by:** Environment variables `MODEL_NAME`, `OPENAI_BASE_URL`, `O_API_KEY`
 
