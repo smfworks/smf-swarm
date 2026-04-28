@@ -26,7 +26,7 @@ class TestHealth:
         assert res.status_code == 200
         data = res.json()
         assert data["status"] == "ok"
-        assert data["version"] == "1.6.0"
+        assert data["version"] == "1.7.0"
         assert data["pipeline_available"] is True
         assert isinstance(data["langgraph_available"], bool)
 

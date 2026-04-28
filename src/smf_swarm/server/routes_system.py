@@ -19,7 +19,7 @@ async def health():
         pass
     return HealthResponse(
         status="ok",
-        version="1.6.0",
+        version="1.7.0",
         pipeline_available=pipeline_ok,
         langgraph_available=langgraph_ok,
     )
