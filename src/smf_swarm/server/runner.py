@@ -57,7 +57,7 @@ class ServerJobRunner:
                 domain=item.get("domain", "general"),
                 context_text=item.get("context_text", ""),
                 multi_sample=item.get("multi_sample", 1),
-                langgraph=item.get("langgraph", False),
+                langgraph=item.get("langgraph", True),
             )
             job = self._inner.get_job(job_id)
             jobs.append(job)

@@ -96,11 +96,11 @@ Examples:
         help="Number of temperature-swept runs for confidence uncertainty (default: 1)",
     )
     p_predict.add_argument(
-        "--langgraph",
+        "--no-langgraph",
         dest="langgraph",
-        action="store_true",
-        default=False,
-        help="Run via LangGraph backend if installed",
+        action="store_false",
+        default=True,
+        help="Force classic backend instead of LangGraph",
     )
     p_predict.add_argument(
         "--output", "-o", default=None, help="Output file path (JSON)"

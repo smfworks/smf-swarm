@@ -115,7 +115,7 @@ class JobRunner:
         domain: str = "general",
         context_text: str = "",
         multi_sample: int = 1,
-        langgraph: bool = False,
+        langgraph: bool = True,
     ) -> str:
         """Queue a new prediction job. Returns job_id."""
         job_id = f"smf-{uuid.uuid4().hex[:12]}"

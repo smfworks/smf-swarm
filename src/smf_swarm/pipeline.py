@@ -113,26 +113,24 @@ class Pipeline:
         Args:
             multi_sample: Number of temperature-swept runs to average for
                 uncertainty quantification (default 1 = single run).
-            langgraph: If True, force LangGraph backend. If False, force
-                classic _run_state_machine. If None (default), auto-detect
-                via LANGGRAPH_AUTO=1 when langgraph is installed.
-                Environment LANGGRAPH_DISABLE=1 overrides all.
+            langgraph: If True (default when installed), use LangGraph backend.
+                If False, force classic _run_state_machine.
+                If None, auto-detect: use LangGraph when available.
+                Environment LANGGRAPH_DISABLE=1 forces classic backend.
         """
         env_disable = os.environ.get("LANGGRAPH_DISABLE", "").lower() in (
             "1",
             "true",
             "yes",
         )
-        env_auto = os.environ.get("LANGGRAPH_AUTO", "").lower() in ("1", "true", "yes")
-        use_langgraph = False
 
-        if env_disable:
+        if env_disable or langgraph is False:
             use_langgraph = False
         elif langgraph is True:
             use_langgraph = True
-        elif langgraph is None and env_auto and _LANGGRAPH_AVAILABLE:
-            use_langgraph = True
-        elif langgraph is False:
+        elif langgraph is None and _LANGGRAPH_AVAILABLE:
+            use_langgraph = True  # DEFAULT: use LangGraph when installed
+        else:
             use_langgraph = False
 
         if use_langgraph and _LANGGRAPH_AVAILABLE and _LANGGRAPH_PIPELINE is not None:

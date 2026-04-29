@@ -74,7 +74,7 @@ def predict():
         domain=domain,
         context_text=context_text,
         multi_sample=multi_sample,
-        langgraph=data.get("langgraph", False),
+        langgraph=data.get("langgraph", True),
     )
     return jsonify({"job_id": job_id, "status": "queued"})
 

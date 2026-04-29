@@ -87,7 +87,7 @@ class BacktestStore:
         data_quality: float = 0.5,
         health_score: float = 0.0,
         social_modifier: Optional[float] = None,
-        langgraph: bool = False,
+        langgraph: bool = True,
         thread_id: str = "",
         checkpoint_path: str = "",
     ) -> str:
