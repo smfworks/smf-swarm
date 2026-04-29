@@ -28,7 +28,9 @@ class PredictRequest(BaseModel):
     multi_sample: int = Field(
         1, ge=1, le=20, description="Number of temperature-swept runs"
     )
-    langgraph: bool = Field(True, description="Use LangGraph backend if installed (default True)")
+    langgraph: bool = Field(
+        True, description="Use LangGraph backend if installed (default True)"
+    )
     output_confidence_interval: bool = Field(
         True, description="Include calibrated confidence interval in response"
     )

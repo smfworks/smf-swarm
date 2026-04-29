@@ -168,10 +168,11 @@ class TestLogHwEnv:
 
     def test_hw_env_output(self):
         import importlib.util
+        from pathlib import Path
 
-        spec = importlib.util.spec_from_file_location(
-            "log_hw_env", "/home/mikesai2/smf-works/smf-swarm/scripts/log_hw_env.py"
-        )
+        repo_root = Path(__file__).resolve().parent.parent
+        script_path = repo_root / "scripts" / "log_hw_env.py"
+        spec = importlib.util.spec_from_file_location("log_hw_env", str(script_path))
         mod = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(mod)
         data = mod.gather()
