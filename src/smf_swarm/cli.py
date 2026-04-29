@@ -205,12 +205,12 @@ Examples:
     )
     p_bench.add_argument(
         "--dataset",
-        required=True,
-        help="Path to canonical JSONL dataset (use 'dummy' for auto-generated)",
+        default="bundled",
+        help="Path to canonical JSONL dataset (use 'bundled' for ship-included, 'dummy' for auto-generated)",
     )
     p_bench.add_argument(
         "--modes",
-        default="standard",
+        default="standard,debate",
         help="Comma-separated modes: standard,debate,full",
     )
     p_bench.add_argument(
@@ -223,6 +223,12 @@ Examples:
     )
     p_bench.add_argument(
         "--max-questions", type=int, default=0, help="Cap number of questions (0 = all)"
+    )
+    p_bench.add_argument(
+        "--self-test",
+        action="store_true",
+        dest="self_test",
+        help="Quick self-test using bundled dataset (≈30s, no external APIs)",
     )
     p_bench.add_argument(
         "--fetch", action="store_true", help="Auto-fetch dataset if not found"
@@ -533,6 +539,13 @@ def _cmd_benchmark(args):
 
     # Optionally fetch dataset
     dataset_path = args.dataset
+    if getattr(args, "self_test", False):
+        dataset_path = "bundled"
+        args.hw_env = False  # skip hw env for quick test
+        if args.max_questions == 0:
+            args.max_questions = 50
+        print("Self-test mode: using bundled mini-benchmark (50 questions, no external APIs)")
+
     if dataset_path.lower() == "dummy":
         from smf_swarm.platform_paths import default_cache_dir
 
@@ -553,7 +566,7 @@ def _cmd_benchmark(args):
                 cwd=os.path.dirname(os.path.dirname(__file__)),
             )
 
-    elif not os.path.exists(dataset_path) and args.fetch:
+    elif dataset_path.lower() not in ("bundled", "self-test", "self_test") and not os.path.exists(dataset_path) and args.fetch:
         print(f"Dataset not found: {dataset_path}")
         print("Attempting auto-fetch...")
         # Determine dataset name from path
@@ -573,9 +586,9 @@ def _cmd_benchmark(args):
             ]
         )
 
-    if not os.path.exists(dataset_path):
+    if dataset_path.lower() not in ("bundled", "self-test", "self_test") and not os.path.exists(dataset_path):
         print(f"❌ Dataset not found: {dataset_path}")
-        print("  Run: smf-swarm benchmark --dataset dummy")
+        print("  Run: smf-swarm benchmark --self-test")
         sys.exit(1)
 
     # Optionally log hardware environment

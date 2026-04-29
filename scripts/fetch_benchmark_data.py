@@ -54,6 +54,9 @@ def fetch_metaculus(limit: int = 200) -> Iterator[dict]:
     is set. Consider using --dummy or exporting a personal API token.
     """
     token = os.environ.get("METACULUS_API_TOKEN", "")
+    if not token:
+        print("  [Metaculus] Skipping — no METACULUS_API_TOKEN in environment.")
+        return
     headers = {
         "Accept": "application/json",
         "User-Agent": "smf-swarm/1.4.1 (research use)",

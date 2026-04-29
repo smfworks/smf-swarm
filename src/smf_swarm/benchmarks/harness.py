@@ -4,17 +4,20 @@ Runs SMF Swarm prediction pipeline against a canonical benchmark dataset,
 records all predictions to BacktestStore, and produces calibrated
 Brier/ECE/accuracy reports with reliability diagrams.
 
+The harness ships with a bundled zero-dependency benchmark (50 questions)
+that requires no external API calls. Use ``self_test=True`` or pass
+``" bundled"`` (or ``"self-test"``) as the dataset path.
+
 Usage:
     from smf_swarm.benchmarks.harness import BenchmarkHarness
     harness = BenchmarkHarness()
     report = harness.run(
-        dataset=default_cache_dir() / "benchmarks" / "metaculus.jsonl",
-        modes=["standard", "debate", "full"],
-        multi_samples=[1, 5],
+        dataset="bundled",                       # ← zero-dep default
+        modes=["standard", "debate"],
+        multi_samples=[1],
         output_dir="benchmark_results/",
-        llm_model="gpt-4o-2024-08-06",
     )
-    report.to_markdown("docs/benchmarks_results_metaculus.md")
+    report.to_markdown("docs/benchmarks_results.md")
 """
 
 from __future__ import annotations
@@ -154,7 +157,17 @@ class BenchmarkHarness:
         self.pipeline = Pipeline()
 
     def _load_dataset(self, path: str) -> list[dict]:
-        """Load canonical JSONL dataset."""
+        """Load canonical JSONL dataset.
+
+        Supports magic paths:
+            "bundled" or "self-test"  → ship-included mini_benchmark.jsonl
+        """
+        if path in ("bundled", "self-test", "self_test"):
+            import importlib.resources as ir
+
+            data_path = ir.files("smf_swarm.benchmarks.data") / "mini_benchmark.jsonl"
+            with data_path.open("r", encoding="utf-8") as f:
+                return [json.loads(line.strip()) for line in f if line.strip()]
         records = []
         with open(os.path.expanduser(path), "r", encoding="utf-8") as f:
             for line in f:
