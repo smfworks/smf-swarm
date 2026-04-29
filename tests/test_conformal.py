@@ -10,7 +10,6 @@ Coverage goals
 
 from __future__ import annotations
 
-import math
 import random
 
 import numpy as np
@@ -18,8 +17,8 @@ import pytest
 
 from smf_swarm.conformal import ConformalInterval, ConformalPredictor
 
-
 # ── Fixtures ─────────────────────────────────────────────────
+
 
 @pytest.fixture
 def cp_05():
@@ -49,9 +48,14 @@ def cp_10():
 
 # ── Dataclass behaviour ─────────────────────────────────────
 
+
 def test_interval_properties():
     ci = ConformalInterval(
-        low=0.55, high=0.85, margin=0.15, coverage_target=0.95, prediction_set=frozenset({1})
+        low=0.55,
+        high=0.85,
+        margin=0.15,
+        coverage_target=0.95,
+        prediction_set=frozenset({1}),
     )
     assert ci.width == pytest.approx(0.30, abs=1e-4)
     assert ci.is_certain is True
@@ -61,7 +65,11 @@ def test_interval_properties():
 
 def test_interval_uncertain():
     ci = ConformalInterval(
-        low=0.3, high=0.7, margin=0.20, coverage_target=0.90, prediction_set=frozenset({0, 1})
+        low=0.3,
+        high=0.7,
+        margin=0.20,
+        coverage_target=0.90,
+        prediction_set=frozenset({0, 1}),
     )
     assert ci.width == pytest.approx(0.40, abs=1e-4)
     assert ci.is_certain is False
@@ -70,12 +78,17 @@ def test_interval_uncertain():
 
 def test_interval_no():
     ci = ConformalInterval(
-        low=0.0, high=0.25, margin=0.25, coverage_target=0.95, prediction_set=frozenset({0})
+        low=0.0,
+        high=0.25,
+        margin=0.25,
+        coverage_target=0.95,
+        prediction_set=frozenset({0}),
     )
     assert ci.label == "no"
 
 
 # ── Core prediction logic ───────────────────────────────────
+
 
 def test_predict_interval_before_fit():
     cp = ConformalPredictor(alpha=0.05)
@@ -112,6 +125,7 @@ def test_predict_intervals_batch(cp_05):
 
 
 # ── Calibration / quantile math ─────────────────────────────
+
 
 def test_fit_empty_calibration():
     cp = ConformalPredictor(alpha=0.05)
@@ -158,6 +172,7 @@ def test_invalid_alpha():
 
 # ── Empirical coverage ────────────────────────────────────
 
+
 def test_coverage_well_calibrated(cp_05):
     """On a fresh synthetic split, coverage must be ≥ target (most of the time).
     We run multiple seeds to avoid rare statistical flukes."""
@@ -196,6 +211,7 @@ def test_coverage_empty_test():
 
 
 # ── Adaptive binning ────────────────────────────────────────
+
 
 def test_adaptive_binning_trivial():
     cp = ConformalPredictor(alpha=0.05)
@@ -251,7 +267,10 @@ def test_mapie_fit_and_predict():
 
     cp = ConformalPredictor(alpha=0.10)
     n = 100
-    X = [[float(x), float(y)] for x, y in zip(np.random.normal(size=n), np.random.normal(size=n))]
+    X = [
+        [float(x), float(y)]
+        for x, y in zip(np.random.normal(size=n), np.random.normal(size=n))
+    ]
     y = [1 if x[0] + x[1] > 0 else 0 for x in X]
     cp.fit_mapie(X, y, estimator=LogisticRegression(max_iter=1000), method="score")
     intervals = cp.predict_mapie(X[:5])

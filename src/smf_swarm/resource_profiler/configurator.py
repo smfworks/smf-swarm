@@ -6,11 +6,9 @@ Only this module touches the filesystem (config file).
 
 from __future__ import annotations
 
-import os
 import json
 from pathlib import Path
 from datetime import datetime, timezone
-from typing import Optional
 
 try:
     import yaml
@@ -105,7 +103,9 @@ def _load_raw() -> dict:
 def _save_raw(data: dict) -> None:
     CONFIG_DIR.mkdir(parents=True, exist_ok=True)
     if yaml:
-        CONFIG_FILE.write_text(yaml.dump(data, default_flow_style=False, sort_keys=False))
+        CONFIG_FILE.write_text(
+            yaml.dump(data, default_flow_style=False, sort_keys=False)
+        )
     else:
         json_path = CONFIG_FILE.with_suffix(".json")
         json_path.write_text(json.dumps(data, indent=2))

@@ -11,27 +11,33 @@ router = APIRouter(prefix="/batch", tags=["batch"])
 
 def get_auth():
     from smf_swarm.server.auth import AuthManager
+
     return AuthManager()
 
 
 def get_ratelimiter():
     from smf_swarm.server.auth import RateLimiter
+
     return RateLimiter()
 
 
 @router.post("", response_model=BatchResponse, status_code=202)
-async def batch_predict(req: BatchRequest, auth=Depends(get_auth), rl=Depends(get_ratelimiter)):
+async def batch_predict(
+    req: BatchRequest, auth=Depends(get_auth), rl=Depends(get_ratelimiter)
+):
     runner = get_runner()
-    batch_id = runner.submit_batch([
-        {
-            "query": item.query,
-            "mode": item.mode,
-            "domain": item.domain,
-            "context_text": item.context_text,
-            "multi_sample": item.multi_sample,
-        }
-        for item in req.items
-    ])
+    batch_id = runner.submit_batch(
+        [
+            {
+                "query": item.query,
+                "mode": item.mode,
+                "domain": item.domain,
+                "context_text": item.context_text,
+                "multi_sample": item.multi_sample,
+            }
+            for item in req.items
+        ]
+    )
     return BatchResponse(
         batch_id=batch_id,
         status="queued",

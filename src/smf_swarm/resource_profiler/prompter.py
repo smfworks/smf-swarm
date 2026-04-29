@@ -6,10 +6,10 @@ Handles interactive and auto modes. Purely I/O — no business logic.
 from __future__ import annotations
 
 import sys
-from typing import Callable, Optional
+from typing import Callable
 
 from .detector import HardwareProfile
-from .registry import SwarmProfile, get_profile_by_name, estimate_duration
+from .registry import SwarmProfile, estimate_duration
 
 
 def prompt_profile(
@@ -46,6 +46,7 @@ def prompt_profile(
 
 # ── Output Formatting ────────────────────────────
 
+
 def _print_header(out: Callable[[str], None]) -> None:
     out("══════════════════════════════════════════════════════════════")
     out("      SMF Swarm — Hardware & Swarm Profile Setup")
@@ -53,13 +54,15 @@ def _print_header(out: Callable[[str], None]) -> None:
 
 
 def _print_hardware(hw: HardwareProfile, out: Callable[[str], None]) -> None:
-    out(f"\n  Detected hardware:")
-    out(f"    • RAM: {hw.total_ram_gb:.1f} GB total ({hw.available_ram_gb:.1f} GB available)")
+    out("\n  Detected hardware:")
+    out(
+        f"    • RAM: {hw.total_ram_gb:.1f} GB total ({hw.available_ram_gb:.1f} GB available)"
+    )
     out(f"    • CPU: {hw.cpu_cores} cores ({hw.cpu_threads} threads)")
     if hw.has_gpu:
         out(f"    • GPU: {hw.gpu_name} ({hw.vram_gb:.1f} GB VRAM)")
     else:
-        out(f"    • GPU: Not detected (CPU inference)")
+        out("    • GPU: Not detected (CPU inference)")
     out(f"    • OS:  {hw.os_name} {hw.os_version}")
 
 
@@ -70,9 +73,10 @@ def _print_profiles(
     out: Callable[[str], None],
 ) -> None:
     out(f"\n  Recommended profile: [{recommended.priority}] {recommended.display_name}")
-    out(f"\n  Choose your swarm profile:\n")
+    out("\n  Choose your swarm profile:\n")
 
     from .registry import ALL_PROFILES
+
     for idx, p in enumerate(ALL_PROFILES, start=1):
         marker = ""
         lock = ""
@@ -85,9 +89,15 @@ def _print_profiles(
             lock = "  [UNAVAILABLE — requires more RAM]"
 
         status_icon = "✓" if can_run else "✗"
-        avail_note = f"available ({p.ram_target_gb:.0f} GB target)" if can_run else f"needs {p.ram_min_gb:.0f}+ GB RAM"
+        avail_note = (
+            f"available ({p.ram_target_gb:.0f} GB target)"
+            if can_run
+            else f"needs {p.ram_min_gb:.0f}+ GB RAM"
+        )
 
-        out(f"    [{idx}] {p.display_name:<18}  {status_icon} {avail_note}{marker}{lock}")
+        out(
+            f"    [{idx}] {p.display_name:<18}  {status_icon} {avail_note}{marker}{lock}"
+        )
         out(f"        {p.agent_count} agents, {p.max_steps} steps, {p.llm_model}")
         out(f"        {p.description} — est. {estimate_duration(p)}")
         out("")
@@ -104,6 +114,7 @@ def _ask_choice(
     out: Callable[[str], None],
 ) -> str:
     from .registry import ALL_PROFILES
+
     max_idx = len(ALL_PROFILES) + 1
     rec_idx = recommended.priority
 
@@ -119,14 +130,18 @@ def _ask_choice(
                     if chosen in available:
                         return str(val)
                     else:
-                        out(f"    ⚠ {chosen.display_name} requires {chosen.ram_min_gb:.0f}+ GB RAM.")
-                        confirm = _in(f"    Use anyway? [y/N]: ").strip().lower()
+                        out(
+                            f"    ⚠ {chosen.display_name} requires {chosen.ram_min_gb:.0f}+ GB RAM."
+                        )
+                        confirm = _in("    Use anyway? [y/N]: ").strip().lower()
                         if confirm == "y":
                             return str(val)
                         continue
                 else:
                     return str(val)  # Custom
-        out(f"    ⚠ Invalid choice. Enter a number 1-{max_idx}, or press Enter for default.")
+        out(
+            f"    ⚠ Invalid choice. Enter a number 1-{max_idx}, or press Enter for default."
+        )
 
 
 def _resolve_choice(
@@ -135,6 +150,7 @@ def _resolve_choice(
     recommended: SwarmProfile,
 ) -> SwarmProfile:
     from .registry import ALL_PROFILES
+
     idx = int(choice_str)
     if idx <= len(ALL_PROFILES):
         return ALL_PROFILES[idx - 1]
@@ -184,5 +200,7 @@ def format_profile_table(
     ]
     for p in available:
         rec_mark = " ★" if p.name == recommended.name else ""
-        lines.append(f"  {p.display_name:<20} {p.agent_count} agents × {p.max_steps} steps{rec_mark}")
+        lines.append(
+            f"  {p.display_name:<20} {p.agent_count} agents × {p.max_steps} steps{rec_mark}"
+        )
     return "\n".join(lines)

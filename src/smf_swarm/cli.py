@@ -44,40 +44,99 @@ Examples:
     sub.add_parser("configure", help="Run first-time configuration wizard")
 
     # ── profile ──────────────────────────────────
-    p_profile = sub.add_parser("profile", help="Detect hardware and choose swarm profile")
-    p_profile.add_argument("--auto", dest="auto", action="store_true",
-                           default=False, help="Auto-apply recommended profile (non-interactive)")
-    p_profile.add_argument("--show", dest="show", action="store_true",
-                           default=False, help="Show current profile without changing")
-    p_profile.add_argument("--reset", dest="reset", action="store_true",
-                           default=False, help="Force re-detection on next run")
+    p_profile = sub.add_parser(
+        "profile", help="Detect hardware and choose swarm profile"
+    )
+    p_profile.add_argument(
+        "--auto",
+        dest="auto",
+        action="store_true",
+        default=False,
+        help="Auto-apply recommended profile (non-interactive)",
+    )
+    p_profile.add_argument(
+        "--show",
+        dest="show",
+        action="store_true",
+        default=False,
+        help="Show current profile without changing",
+    )
+    p_profile.add_argument(
+        "--reset",
+        dest="reset",
+        action="store_true",
+        default=False,
+        help="Force re-detection on next run",
+    )
 
     # ── predict ──────────────────────────────────
     p_predict = sub.add_parser("predict", help="Run a prediction")
     p_predict.add_argument("query", help="The prediction question")
-    p_predict.add_argument("--mode", default=None, choices=["standard", "debate", "full"],
-                           help="Prediction mode (default: from config)")
-    p_predict.add_argument("--domain", default=None, help="Domain: technology|financial|political|general")
-    p_predict.add_argument("--no-social", dest="social", action="store_false",
-                           default=True, help="Disable social simulation even in full mode")
-    p_predict.add_argument("--multi-sample", type=int, default=1, dest="multi_sample",
-                           help="Number of temperature-swept runs for confidence uncertainty (default: 1)")
-    p_predict.add_argument("--langgraph", dest="langgraph", action="store_true",
-                           default=False, help="Run via LangGraph backend if installed")
-    p_predict.add_argument("--output", "-o", default=None, help="Output file path (JSON)")
-    p_predict.add_argument("--no-cache", dest="no_cache", action="store_true",
-                           default=False, help="Bypass LLM response cache")
+    p_predict.add_argument(
+        "--mode",
+        default=None,
+        choices=["standard", "debate", "full"],
+        help="Prediction mode (default: from config)",
+    )
+    p_predict.add_argument(
+        "--domain", default=None, help="Domain: technology|financial|political|general"
+    )
+    p_predict.add_argument(
+        "--no-social",
+        dest="social",
+        action="store_false",
+        default=True,
+        help="Disable social simulation even in full mode",
+    )
+    p_predict.add_argument(
+        "--multi-sample",
+        type=int,
+        default=1,
+        dest="multi_sample",
+        help="Number of temperature-swept runs for confidence uncertainty (default: 1)",
+    )
+    p_predict.add_argument(
+        "--langgraph",
+        dest="langgraph",
+        action="store_true",
+        default=False,
+        help="Run via LangGraph backend if installed",
+    )
+    p_predict.add_argument(
+        "--output", "-o", default=None, help="Output file path (JSON)"
+    )
+    p_predict.add_argument(
+        "--no-cache",
+        dest="no_cache",
+        action="store_true",
+        default=False,
+        help="Bypass LLM response cache",
+    )
 
     # ── backtest ─────────────────────────────────
-    p_backtest = sub.add_parser("backtest", help="Report calibration and historical accuracy")
+    p_backtest = sub.add_parser(
+        "backtest", help="Report calibration and historical accuracy"
+    )
     p_backtest.add_argument("--domain", default=None, help="Filter by domain")
-    p_backtest.add_argument("--mode", default=None, choices=["standard", "debate", "full"],
-                           help="Filter by mode")
-    p_backtest.add_argument("--set-truth", dest="truth_id", default=None,
-                           help="Update ground truth for a prediction ID")
-    p_backtest.add_argument("--outcome", dest="outcome", default=None,
-                           choices=["true", "false"],
-                           help="Outcome for --set-truth (true/false)")
+    p_backtest.add_argument(
+        "--mode",
+        default=None,
+        choices=["standard", "debate", "full"],
+        help="Filter by mode",
+    )
+    p_backtest.add_argument(
+        "--set-truth",
+        dest="truth_id",
+        default=None,
+        help="Update ground truth for a prediction ID",
+    )
+    p_backtest.add_argument(
+        "--outcome",
+        dest="outcome",
+        default=None,
+        choices=["true", "false"],
+        help="Outcome for --set-truth (true/false)",
+    )
 
     # ── test ─────────────────────────────────────
     sub.add_parser("test", help="Run a connectivity smoke test against your LLM")
@@ -90,36 +149,119 @@ Examples:
 
     # ── server ──────────────────────────────────────
     p_server = sub.add_parser("server", help="Launch the FastAPI headless API server")
-    p_server.add_argument("--port", type=int, default=8080, help="Port to bind (default: 8080)")
-    p_server.add_argument("--host", type=str, default="127.0.0.1", help="Host to bind (default: 127.0.0.1)")
-    p_server.add_argument("--token", type=str, default=None, help="Optional bearer token for API auth")
-    p_server.add_argument("--rate-limit", dest="rate_limit", type=int, nargs=2, metavar=("COUNT", "SECONDS"),
-                         default=None, help="Rate limit API requests per IP (e.g. --rate-limit 10 60)")
-    p_server.add_argument("--workers", type=int, default=1, help="Number of worker processes (default: 1)")
+    p_server.add_argument(
+        "--port", type=int, default=8080, help="Port to bind (default: 8080)"
+    )
+    p_server.add_argument(
+        "--host",
+        type=str,
+        default="127.0.0.1",
+        help="Host to bind (default: 127.0.0.1)",
+    )
+    p_server.add_argument(
+        "--token", type=str, default=None, help="Optional bearer token for API auth"
+    )
+    p_server.add_argument(
+        "--rate-limit",
+        dest="rate_limit",
+        type=int,
+        nargs=2,
+        metavar=("COUNT", "SECONDS"),
+        default=None,
+        help="Rate limit API requests per IP (e.g. --rate-limit 10 60)",
+    )
+    p_server.add_argument(
+        "--workers", type=int, default=1, help="Number of worker processes (default: 1)"
+    )
 
     # ── web ───────────────────────────────────────
     p_web = sub.add_parser("web", help="Launch the web UI server")
-    p_web.add_argument("--port", type=int, default=8080, help="Port to bind (default: 8080)")
-    p_web.add_argument("--host", type=str, default="127.0.0.1", help="Host to bind (default: 127.0.0.1)")
-    p_web.add_argument("--token", type=str, default=None, help="Optional bearer token for API auth")
-    p_web.add_argument("--rate-limit", dest="rate_limit", type=int, nargs=2, metavar=("COUNT", "SECONDS"),
-                       default=None, help="Rate limit API requests per IP (e.g. --rate-limit 10 60)")
+    p_web.add_argument(
+        "--port", type=int, default=8080, help="Port to bind (default: 8080)"
+    )
+    p_web.add_argument(
+        "--host",
+        type=str,
+        default="127.0.0.1",
+        help="Host to bind (default: 127.0.0.1)",
+    )
+    p_web.add_argument(
+        "--token", type=str, default=None, help="Optional bearer token for API auth"
+    )
+    p_web.add_argument(
+        "--rate-limit",
+        dest="rate_limit",
+        type=int,
+        nargs=2,
+        metavar=("COUNT", "SECONDS"),
+        default=None,
+        help="Rate limit API requests per IP (e.g. --rate-limit 10 60)",
+    )
 
     # ── benchmark ────────────────────────────────
-    p_bench = sub.add_parser("benchmark", help="Run SMF Swarm against a benchmark dataset and produce Brier/ECE reports")
-    p_bench.add_argument("--dataset", required=True, help="Path to canonical JSONL dataset (use 'dummy' for auto-generated)")
-    p_bench.add_argument("--modes", default="standard", help="Comma-separated modes: standard,debate,full")
-    p_bench.add_argument("--multi-samples", default="1", help="Comma-separated multi_sample values: 1,5")
-    p_bench.add_argument("--output-dir", default="benchmark_results/", help="Directory for JSON + MD reports")
-    p_bench.add_argument("--max-questions", type=int, default=0, help="Cap number of questions (0 = all)")
-    p_bench.add_argument("--fetch", action="store_true", help="Auto-fetch dataset if not found")
-    p_bench.add_argument("--hw-env", action="store_true", help="Log hardware environment before running")
-    p_bench.add_argument("--no-hw-env", action="store_false", dest="hw_env", help="Skip hardware environment logging")
-    p_bench.add_argument("--llm-model", default="", help="LLM model name for report metadata")
-    p_bench.add_argument("--conformal", action="store_true", help="Enable conformal prediction (split calibration)")
-    p_bench.add_argument("--conformal-alpha", type=float, default=0.05, help="Miscoverage rate for conformal prediction (default 0.05)")
-    p_bench.add_argument("--conformal-cal-ratio", type=float, default=0.7, help="Fraction of data used for calibration (default 0.7)")
-    p_bench.add_argument("--reliability-bins", type=int, default=10, help="Number of bins for reliability diagrams")
+    p_bench = sub.add_parser(
+        "benchmark",
+        help="Run SMF Swarm against a benchmark dataset and produce Brier/ECE reports",
+    )
+    p_bench.add_argument(
+        "--dataset",
+        required=True,
+        help="Path to canonical JSONL dataset (use 'dummy' for auto-generated)",
+    )
+    p_bench.add_argument(
+        "--modes",
+        default="standard",
+        help="Comma-separated modes: standard,debate,full",
+    )
+    p_bench.add_argument(
+        "--multi-samples", default="1", help="Comma-separated multi_sample values: 1,5"
+    )
+    p_bench.add_argument(
+        "--output-dir",
+        default="benchmark_results/",
+        help="Directory for JSON + MD reports",
+    )
+    p_bench.add_argument(
+        "--max-questions", type=int, default=0, help="Cap number of questions (0 = all)"
+    )
+    p_bench.add_argument(
+        "--fetch", action="store_true", help="Auto-fetch dataset if not found"
+    )
+    p_bench.add_argument(
+        "--hw-env", action="store_true", help="Log hardware environment before running"
+    )
+    p_bench.add_argument(
+        "--no-hw-env",
+        action="store_false",
+        dest="hw_env",
+        help="Skip hardware environment logging",
+    )
+    p_bench.add_argument(
+        "--llm-model", default="", help="LLM model name for report metadata"
+    )
+    p_bench.add_argument(
+        "--conformal",
+        action="store_true",
+        help="Enable conformal prediction (split calibration)",
+    )
+    p_bench.add_argument(
+        "--conformal-alpha",
+        type=float,
+        default=0.05,
+        help="Miscoverage rate for conformal prediction (default 0.05)",
+    )
+    p_bench.add_argument(
+        "--conformal-cal-ratio",
+        type=float,
+        default=0.7,
+        help="Fraction of data used for calibration (default 0.7)",
+    )
+    p_bench.add_argument(
+        "--reliability-bins",
+        type=int,
+        default=10,
+        help="Number of bins for reliability diagrams",
+    )
 
     args = parser.parse_args(argv)
     if not args.cmd:
@@ -151,6 +293,7 @@ Examples:
 
 def _cmd_configure():
     from smf_swarm.config import configure
+
     configure()
 
 
@@ -170,7 +313,9 @@ def _cmd_predict(args):
     print(f"  Query: {args.query}")
     print(f"  Domain: {domain}")
     if run_social:
-        print(f"  Social simulation: ENABLED ({cfg.social_agents} agents × {cfg.social_rounds} rounds)")
+        print(
+            f"  Social simulation: ENABLED ({cfg.social_agents} agents × {cfg.social_rounds} rounds)"
+        )
     print(f"{'='*60}\n")
 
     pipeline = Pipeline()
@@ -186,7 +331,7 @@ def _cmd_predict(args):
     )
 
     print(f"\n{'='*60}")
-    print(f"  RESULT")
+    print("  RESULT")
     print(f"{'='*60}")
     print(f"  Confidence:      {result.confidence:.2f}")
     print(f"  Data Quality:    {result.data_quality:.2f}")
@@ -197,8 +342,10 @@ def _cmd_predict(args):
     # Multi-sample uncertainty indicator
     multi_meta = result.metadata.get("multi_sample", {})
     if multi_meta.get("runs", 0) > 1:
-        print(f"  Confidence Std:  {multi_meta.get('confidence_std', 0):.4f} (over {multi_meta['runs']} runs)")
-    print(f"\n  EXECUTIVE SUMMARY")
+        print(
+            f"  Confidence Std:  {multi_meta.get('confidence_std', 0):.4f} (over {multi_meta['runs']} runs)"
+        )
+    print("\n  EXECUTIVE SUMMARY")
     print(f"  {'-'*56}")
     for line in result.summary.split("\n")[:10]:
         print(f"  {line}")
@@ -240,15 +387,16 @@ def _cmd_test():
         print(f"     Response: {resp.content[:100]}")
     except Exception as e:
         print(f"  ❌ Connection FAILED: {e}")
-        print(f"\n  Troubleshooting:")
-        print(f"    1. Is your LLM server running? (e.g., 'ollama serve')")
+        print("\n  Troubleshooting:")
+        print("    1. Is your LLM server running? (e.g., 'ollama serve')")
         print(f"    2. Is base_url correct? Current: {cfg.llm.base_url}")
-        print(f"    3. Run 'smf-swarm configure' to fix settings")
+        print("    3. Run 'smf-swarm configure' to fix settings")
         sys.exit(1)
 
 
 def _cmd_version():
     from smf_swarm import __version__, __author__, __contact__
+
     print(f"smf-swarm {__version__}")
     print(f"Author:    {__author__}")
     print(f"Contact:   {__contact__}")
@@ -257,6 +405,7 @@ def _cmd_version():
 def _cmd_config():
     from smf_swarm.config import load_config, DEFAULT_CONFIG_FILE
     import json
+
     cfg = load_config()
     print(f"\nConfig file: {DEFAULT_CONFIG_FILE}")
     print(f"{'='*60}")
@@ -264,10 +413,11 @@ def _cmd_config():
 
 
 def _cmd_profile(args):
-    from smf_swarm.resource_profiler import run_profiler, get_current_profile, reset_profile
-    from smf_swarm.resource_profiler.prompter import format_profile_table
-    from smf_swarm.resource_profiler.detector import detect_hardware
-    from smf_swarm.resource_profiler.registry import filter_available_profiles, recommend_profile
+    from smf_swarm.resource_profiler import (
+        run_profiler,
+        get_current_profile,
+        reset_profile,
+    )
 
     if args.reset:
         reset_profile()
@@ -293,16 +443,20 @@ def _cmd_profile(args):
 
 def _cmd_web(args):
     from smf_swarm.web.app import run_server
+
     rate_limit = tuple(args.rate_limit) if args.rate_limit else None
-    run_server(host=args.host, port=args.port, auth_token=args.token, rate_limit=rate_limit)
+    run_server(
+        host=args.host, port=args.port, auth_token=args.token, rate_limit=rate_limit
+    )
 
 
 def _cmd_server(args):
     """Boot the FastAPI server via uvicorn."""
     import sys
+
     try:
         import uvicorn
-    except ImportError as exc:
+    except ImportError:
         print("=" * 60)
         print("  ERROR: FastAPI / Uvicorn not installed.")
         print("  Install server dependencies:")
@@ -327,7 +481,9 @@ def _cmd_server(args):
         banner += f"  Rate:     {rate_limit[0]} req / {rate_limit[1]}s\n"
     banner += f"  Workers:  {args.workers}\n"
     if args.host == "0.0.0.0":
-        banner += "  ⚠ WARNING: Binding to 0.0.0.0 exposes this server to the network.\n"
+        banner += (
+            "  ⚠ WARNING: Binding to 0.0.0.0 exposes this server to the network.\n"
+        )
         if not args.token:
             banner += "  ⚠ WARNING: No auth token set. Anyone on your network can access this.\n"
     banner += f"  Press Ctrl+C to stop\n  {'━' * 52}"
@@ -346,6 +502,7 @@ def _cmd_server(args):
 def _cmd_backtest(args):
     from smf_swarm.backtest import BacktestStore
     import json
+
     bt = BacktestStore()
     # Handle ground-truth update
     if args.truth_id:
@@ -363,9 +520,9 @@ def _cmd_backtest(args):
     print(json.dumps(report, indent=2))
     print(f"\n  Total tracked predictions: {report['total']}")
     print(f"  Resolved with ground truth: {report['resolved']}")
-    if report['accuracy'] is not None:
+    if report["accuracy"] is not None:
         print(f"  Accuracy (resolved): {report['accuracy']:.2%}")
-    if report['brier_score'] is not None:
+    if report["brier_score"] is not None:
         print(f"  Brier score (resolved): {report['brier_score']:.4f}")
 
 
@@ -378,26 +535,43 @@ def _cmd_benchmark(args):
     dataset_path = args.dataset
     if dataset_path.lower() == "dummy":
         from smf_swarm.platform_paths import default_cache_dir
+
         outdir = os.path.join(default_cache_dir(), "benchmarks")
         os.makedirs(outdir, exist_ok=True)
         dataset_path = os.path.join(outdir, "dummy.jsonl")
         if not os.path.exists(dataset_path) or args.fetch:
             print("Generating dummy benchmark dataset...")
-            subprocess.run([
-                sys.executable, "-m", "scripts.fetch_benchmark_data",
-                "--dummy", "--limit", "200",
-            ], cwd=os.path.dirname(os.path.dirname(__file__)))
+            subprocess.run(
+                [
+                    sys.executable,
+                    "-m",
+                    "scripts.fetch_benchmark_data",
+                    "--dummy",
+                    "--limit",
+                    "200",
+                ],
+                cwd=os.path.dirname(os.path.dirname(__file__)),
+            )
 
     elif not os.path.exists(dataset_path) and args.fetch:
         print(f"Dataset not found: {dataset_path}")
         print("Attempting auto-fetch...")
         # Determine dataset name from path
         name = os.path.splitext(os.path.basename(dataset_path))[0]
-        subprocess.run([
-            sys.executable,
-            os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "scripts", "fetch_benchmark_data.py"),
-            "--datasets", name, "--limit", "500",
-        ])
+        subprocess.run(
+            [
+                sys.executable,
+                os.path.join(
+                    os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
+                    "scripts",
+                    "fetch_benchmark_data.py",
+                ),
+                "--datasets",
+                name,
+                "--limit",
+                "500",
+            ]
+        )
 
     if not os.path.exists(dataset_path):
         print(f"❌ Dataset not found: {dataset_path}")
@@ -406,15 +580,21 @@ def _cmd_benchmark(args):
 
     # Optionally log hardware environment
     if args.hw_env:
-        import json
-        from pathlib import Path
+
         hw_out = os.path.join(args.output_dir, "hw_env.json")
         print("Logging hardware environment...")
-        subprocess.run([
-            sys.executable,
-            os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "scripts", "log_hw_env.py"),
-            "--outfile", hw_out,
-        ])
+        subprocess.run(
+            [
+                sys.executable,
+                os.path.join(
+                    os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
+                    "scripts",
+                    "log_hw_env.py",
+                ),
+                "--outfile",
+                hw_out,
+            ]
+        )
         print(f"  Saved to {hw_out}")
 
     # Parse modes and multi-samples
@@ -422,7 +602,7 @@ def _cmd_benchmark(args):
     multi_samples = [int(ms.strip()) for ms in args.multi_samples.split(",")]
 
     print(f"\n{'='*60}")
-    print(f"  SMF Swarm Benchmark")
+    print("  SMF Swarm Benchmark")
     print(f"{'='*60}")
     print(f"  Dataset: {dataset_path}")
     print(f"  Modes: {modes}")
@@ -430,7 +610,9 @@ def _cmd_benchmark(args):
     print(f"  Max questions: {args.max_questions or 'all'}")
     print(f"  Output: {args.output_dir}")
     if args.conformal:
-        print(f"  Conformal: α={args.conformal_alpha} | cal_ratio={args.conformal_cal_ratio}")
+        print(
+            f"  Conformal: α={args.conformal_alpha} | cal_ratio={args.conformal_cal_ratio}"
+        )
     print(f"{'='*60}\n")
 
     from smf_swarm.benchmarks.harness import BenchmarkHarness
@@ -442,15 +624,23 @@ def _cmd_benchmark(args):
         multi_samples=multi_samples,
         output_dir=args.output_dir,
         max_questions=args.max_questions,
-        conformal_alpha=args.conformal_alpha if hasattr(args, 'conformal') and args.conformal else None,
-        conformal_cal_ratio=args.conformal_cal_ratio if hasattr(args, 'conformal_cal_ratio') else 0.7,
+        conformal_alpha=(
+            args.conformal_alpha
+            if hasattr(args, "conformal") and args.conformal
+            else None
+        ),
+        conformal_cal_ratio=(
+            args.conformal_cal_ratio if hasattr(args, "conformal_cal_ratio") else 0.7
+        ),
     )
 
     print(f"\n{'='*60}")
     print(f"  Benchmark Complete: {report.benchmark_run_id}")
     print(f"  Duration: {report.duration_s:.1f}s")
     print(f"  Questions: {report.total_questions}")
-    if hasattr(args, 'conformal') and args.conformal:
-        print(f"  Conformal: coverage target {1-args.conformal_alpha:.0%} | margin q̂={report.metrics.get('standard',{}).get('cp_margin','N/A')}")
+    if hasattr(args, "conformal") and args.conformal:
+        print(
+            f"  Conformal: coverage target {1-args.conformal_alpha:.0%} | margin q̂={report.metrics.get('standard',{}).get('cp_margin','N/A')}"
+        )
     print(f"  Report: {args.output_dir}/{report.benchmark_run_id}/report.md")
     print(f"{'='*60}")

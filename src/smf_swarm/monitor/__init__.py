@@ -80,7 +80,9 @@ class SwarmMonitor:
     def end_pipeline(self, status: str = "completed"):
         self.pipeline_end = time.time()
         self.status = status
-        duration = (self.pipeline_end - self.pipeline_start) if self.pipeline_start else 0
+        duration = (
+            (self.pipeline_end - self.pipeline_start) if self.pipeline_start else 0
+        )
         errors = sum(1 for n in self.node_timings if not n.success)
         self._save_history()
         return {
@@ -88,7 +90,9 @@ class SwarmMonitor:
             "pipeline_duration_s": round(duration, 2),
             "node_count": len(self.node_timings),
             "errors": errors,
-            "health_score": round(max(0, 1.0 - errors / max(len(self.node_timings), 1)), 2),
+            "health_score": round(
+                max(0, 1.0 - errors / max(len(self.node_timings), 1)), 2
+            ),
         }
 
     def estimate_remaining(self, total_expected_nodes: int) -> float:
@@ -101,7 +105,9 @@ class SwarmMonitor:
         # Average historical duration for remaining node types (default 30s if unknown)
         avg_remaining = 0.0
         for name in self._node_history:
-            if not any(n.name == name and n.duration is not None for n in self.node_timings):
+            if not any(
+                n.name == name and n.duration is not None for n in self.node_timings
+            ):
                 avg_remaining += self._node_history.get(name, 30.0)
         if avg_remaining == 0:
             avg_remaining = remaining_nodes * 30.0
@@ -122,6 +128,7 @@ class SwarmMonitor:
     def track(self, node_name: str):
         """Context manager for tracking a node."""
         import contextlib
+
         @contextlib.contextmanager
         def _ctx():
             self.start_node(node_name)
@@ -131,4 +138,5 @@ class SwarmMonitor:
             except Exception as e:
                 self.end_node(node_name, success=False, error=str(e))
                 raise
+
         return _ctx()

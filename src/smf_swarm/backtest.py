@@ -22,15 +22,13 @@ Usage:
 
 from __future__ import annotations
 
-import json
 import os
 import sqlite3
 import hashlib
 from datetime import datetime
-from typing import Optional, Sequence
+from typing import Optional
 
 from smf_swarm.platform_paths import default_data_dir
-
 
 DEFAULT_DB = str(default_data_dir() / "backtest.db")
 
@@ -94,7 +92,9 @@ class BacktestStore:
         checkpoint_path: str = "",
     ) -> str:
         """Record a new prediction. Returns prediction_id."""
-        pred_id = hashlib.sha256(f"{query}{datetime.now().isoformat()}".encode()).hexdigest()[:16]
+        pred_id = hashlib.sha256(
+            f"{query}{datetime.now().isoformat()}".encode()
+        ).hexdigest()[:16]
         data = {
             "id": pred_id,
             "query": query,
@@ -150,7 +150,9 @@ class BacktestStore:
             conn.commit()
         return True
 
-    def search(self, domain: Optional[str] = None, mode: Optional[str] = None, limit: int = 50) -> list[dict]:
+    def search(
+        self, domain: Optional[str] = None, mode: Optional[str] = None, limit: int = 50
+    ) -> list[dict]:
         """Search historical predictions."""
         with sqlite3.connect(self.db_path) as conn:
             conn.row_factory = sqlite3.Row
@@ -167,7 +169,9 @@ class BacktestStore:
             rows = conn.execute(q, params).fetchall()
             return [dict(r) for r in rows]
 
-    def calibration_report(self, domain: Optional[str] = None, mode: Optional[str] = None) -> dict:
+    def calibration_report(
+        self, domain: Optional[str] = None, mode: Optional[str] = None
+    ) -> dict:
         """Compute calibration metrics on resolved predictions.
 
         Returns:

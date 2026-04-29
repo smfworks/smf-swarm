@@ -11,10 +11,9 @@ Handles:
 
 import os
 import json
-import stat
 from pathlib import Path
 from dataclasses import dataclass, field, asdict
-from typing import Literal, Optional
+from typing import Optional
 
 from smf_swarm.platform_paths import default_config_dir
 
@@ -25,6 +24,7 @@ except ImportError:
 
 try:
     import keyring
+
     _KEYRING_AVAILABLE = True
 except ImportError:
     _KEYRING_AVAILABLE = False
@@ -42,10 +42,11 @@ ENV_CONFIG_FILE = DEFAULT_CONFIG_DIR / ".env"
 
 # ─── Data model ─────────────────────────────────
 
+
 @dataclass
 class LLMConfig:
-    provider: str = "ollama"          # ollama | openai | anthropic | custom
-    model: str = "kimi-k2.6:cloud"   # any model name the provider supports
+    provider: str = "ollama"  # ollama | openai | anthropic | custom
+    model: str = "kimi-k2.6:cloud"  # any model name the provider supports
     base_url: str = "http://localhost:11434/v1"
     api_key: str = "ollama"
     temperature: float = 0.3
@@ -68,7 +69,7 @@ class LLMConfig:
 @dataclass
 class SwarmConfig:
     llm: LLMConfig = field(default_factory=LLMConfig)
-    default_mode: str = "standard"               # standard | debate | full
+    default_mode: str = "standard"  # standard | debate | full
     default_domain: str = "general"
     social_agents: int = 15
     social_rounds: int = 4
@@ -82,6 +83,7 @@ class SwarmConfig:
     max_steps: int = 100
     swarm_profile: str = ""
     profile_locked: bool = False
+
     @property
     def agent_count(self) -> int:
         return self.social_agents
@@ -96,6 +98,7 @@ class SwarmConfig:
 
 # ─── Environment fallback ─────────────────────────
 
+
 def _env_override(cfg: SwarmConfig) -> SwarmConfig:
     """Override config from environment variables if set."""
     if os.getenv("MODEL_NAME"):
@@ -108,6 +111,7 @@ def _env_override(cfg: SwarmConfig) -> SwarmConfig:
 
 
 # ─── Load / save ──────────────────────────────────
+
 
 def load_config(path: Path | None = None) -> SwarmConfig:
     """Load config from file, or return defaults with env overrides."""
@@ -125,15 +129,33 @@ def load_config(path: Path | None = None) -> SwarmConfig:
             cfg.llm = LLMConfig(**data["llm"])
             # Resolve keyring-stored API key if a placeholder was saved
             cfg.llm.api_key = _resolve_api_key(cfg.llm.api_key)
-        for key in ("default_mode", "default_domain", "social_agents", "social_rounds",
-                    "debaters", "debate_rounds", "output_dir", "memory_dir", "verbose",
-                    "max_steps", "swarm_profile", "profile_locked", "hardware_snapshot"):
+        for key in (
+            "default_mode",
+            "default_domain",
+            "social_agents",
+            "social_rounds",
+            "debaters",
+            "debate_rounds",
+            "output_dir",
+            "memory_dir",
+            "verbose",
+            "max_steps",
+            "swarm_profile",
+            "profile_locked",
+            "hardware_snapshot",
+        ):
             if key in data:
                 setattr(cfg, key, data[key])
         # Also read nested swarm block
         swarm = data.get("swarm", {})
         if swarm:
-            for key in ("agent_count", "max_steps", "llm_model", "profile", "profile_locked"):
+            for key in (
+                "agent_count",
+                "max_steps",
+                "llm_model",
+                "profile",
+                "profile_locked",
+            ):
                 swarm_key = key
                 if key == "profile":
                     swarm_key = "swarm_profile"
@@ -198,6 +220,7 @@ def _resolve_api_key(stored_key: str) -> str:
 
 # ─── LLM factory ──────────────────────────────────
 
+
 def create_llm(cfg: LLMConfig | None = None) -> BaseChatModel:
     """Create a LangChain LLM client from config."""
     if cfg is None:
@@ -213,6 +236,7 @@ def create_llm(cfg: LLMConfig | None = None) -> BaseChatModel:
 
 
 # ─── Interactive wizard ───────────────────────────
+
 
 def configure() -> SwarmConfig:
     """Interactive terminal wizard for first-time setup."""
@@ -241,10 +265,10 @@ def configure() -> SwarmConfig:
     }
     model_default = defaults[cfg.llm.provider]
     if cfg.llm.provider == "ollama":
-        print(f"\nStep 2/5 — Model name")
+        print("\nStep 2/5 — Model name")
         print("  Popular options: llama3.3, qwen2.5, kimi-k2.6:cloud, mistral")
     else:
-        print(f"\nStep 2/5 — Model name")
+        print("\nStep 2/5 — Model name")
     model = input(f"Model [default: {model_default}]: ").strip() or model_default
     cfg.llm.model = model
 
@@ -257,34 +281,40 @@ def configure() -> SwarmConfig:
     }
     url_default = url_defaults[cfg.llm.provider]
     if cfg.llm.provider == "ollama":
-        print(f"\nStep 3/5 — Ollama server URL")
-        print("  If Ollama runs locally, leave default. If on another machine, enter its IP.")
+        print("\nStep 3/5 — Ollama server URL")
+        print(
+            "  If Ollama runs locally, leave default. If on another machine, enter its IP."
+        )
     else:
-        print(f"\nStep 3/5 — API base URL")
+        print("\nStep 3/5 — API base URL")
     url = input(f"Base URL [default: {url_default}]: ").strip() or url_default
     cfg.llm.base_url = url
 
     # ── Step 4: API key
-    print(f"\nStep 4/5 — API key")
+    print("\nStep 4/5 — API key")
     if cfg.llm.provider == "ollama":
         print("  For Ollama, any non-empty string works (e.g., 'ollama').")
-    key = input(f"API key [default: ollama]: ").strip() or "ollama"
+    key = input("API key [default: ollama]: ").strip() or "ollama"
     cfg.llm.api_key = key
 
     # ── Step 5: defaults
-    print(f"\nStep 5/6 — Default prediction mode")
+    print("\nStep 5/6 — Default prediction mode")
     print("  [1] Standard  — fastest, single-model prediction")
     print("  [2] Debate    — adversarial ensemble (recommended)")
     print("  [3] Full      — standard + debate + social validation (most thorough)")
     mode = input("Default mode [default: 2]: ").strip() or "2"
-    cfg.default_mode = {k: v for k, v in [("1", "standard"), ("2", "debate"), ("3", "full")]}.get(mode, "debate")
+    cfg.default_mode = {
+        k: v for k, v in [("1", "standard"), ("2", "debate"), ("3", "full")]
+    }.get(mode, "debate")
 
     # ── Step 6: resource profile
-    print(f"\nStep 6/6 — Swarm resource profile")
+    print("\nStep 6/6 — Swarm resource profile")
     print("  Detecting hardware and choosing the right swarm size for your machine...")
     from smf_swarm.resource_profiler import run_profiler
+
     profile = run_profiler(input_func=input)
-    cfg.apply_profile(profile.name,
+    cfg.apply_profile(
+        profile.name,
         agent_count=profile.agent_count,
         max_steps=profile.max_steps,
         social_agents=profile.agent_count,
@@ -301,8 +331,12 @@ def configure() -> SwarmConfig:
     print(f"Model: {cfg.llm.model} via {cfg.llm.provider}")
     print(f"Base URL: {cfg.llm.base_url}")
     print(f"Default mode: {cfg.default_mode}")
-    print(f"Swarm profile: {profile.display_name} ({profile.agent_count} agents × {profile.max_steps} steps)")
-    print(f"\nRun  smf-swarm predict \"your question here\"  to make your first prediction.")
+    print(
+        f"Swarm profile: {profile.display_name} ({profile.agent_count} agents × {profile.max_steps} steps)"
+    )
+    print(
+        '\nRun  smf-swarm predict "your question here"  to make your first prediction.'
+    )
 
     return cfg
 
@@ -310,6 +344,7 @@ def configure() -> SwarmConfig:
 # ─── Singleton accessor ───────────────────────────
 
 _cfg: Optional[SwarmConfig] = None
+
 
 def get_config(force_reload: bool = False) -> SwarmConfig:
     global _cfg

@@ -11,11 +11,13 @@ router = APIRouter(prefix="/jobs", tags=["jobs"])
 
 def get_auth():
     from smf_swarm.server.auth import AuthManager
+
     return AuthManager()
 
 
 def get_ratelimiter():
     from smf_swarm.server.auth import RateLimiter
+
     return RateLimiter()
 
 
@@ -69,5 +71,7 @@ async def cancel_job(job_id: str, auth=Depends(get_auth), rl=Depends(get_ratelim
     runner = get_runner()
     ok = runner.cancel(job_id)
     if not ok:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Job not found or already completed")
+        raise HTTPException(
+            status.HTTP_404_NOT_FOUND, detail="Job not found or already completed"
+        )
     return None

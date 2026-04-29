@@ -63,7 +63,9 @@ class TestPredictAsync:
         assert res.status_code == 422
 
     def test_predict_alpha_bounds(self, client):
-        res = client.post("/api/v1/predict", json={"query": "Test", "conformal_alpha": -0.1})
+        res = client.post(
+            "/api/v1/predict", json={"query": "Test", "conformal_alpha": -0.1}
+        )
         assert res.status_code == 422
 
 

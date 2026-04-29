@@ -6,17 +6,17 @@ Register Flask blueprints for the web interface.
 from __future__ import annotations
 
 import json
-import os
 
-from flask import Blueprint, request, jsonify, Response, g
+from flask import Blueprint, request, jsonify, Response
 
 from smf_swarm.web.jobs import runner
 from smf_swarm.web.upload import ingest_file
-from smf_swarm.web.auth import init_auth, require_auth, check_rate_limit
+from smf_swarm.web.auth import require_auth, check_rate_limit
 
 api = Blueprint("api", __name__, url_prefix="/api")
 
 # ─── SSE Helpers ──────────────────────────────────
+
 
 def _stream_json(data: dict) -> str:
     """Serialize a dict to JSON for SSE."""
@@ -24,6 +24,7 @@ def _stream_json(data: dict) -> str:
 
 
 # ─── Auth decorators ──────────────────────────────
+
 
 def _check_request():
     """Apply auth and rate limiting to API routes."""
@@ -37,7 +38,9 @@ def _check_request():
         return jsonify(rate_error[0]), rate_error[1]
     return None
 
+
 # ─── Routes ───────────────────────────────────────
+
 
 @api.route("/predict", methods=["POST"])
 def predict():
@@ -60,7 +63,10 @@ def predict():
 
     multi_sample = data.get("multi_sample", 1)
     if not isinstance(multi_sample, int) or multi_sample < 1 or multi_sample > 20:
-        return jsonify({"error": "multi_sample must be an integer between 1 and 20"}), 400
+        return (
+            jsonify({"error": "multi_sample must be an integer between 1 and 20"}),
+            400,
+        )
 
     job_id = runner.submit(
         query=query,
@@ -93,14 +99,25 @@ def predict_langgraph():
 
     try:
         from smf_swarm.pipeline_langgraph import LANGGRAPH_AVAILABLE
+
         if not LANGGRAPH_AVAILABLE:
-            return jsonify({"error": "LangGraph not installed. pip install smf-swarm[langgraph]"}), 503
+            return (
+                jsonify(
+                    {
+                        "error": "LangGraph not installed. pip install smf-swarm[langgraph]"
+                    }
+                ),
+                503,
+            )
     except ImportError:
         return jsonify({"error": "LangGraph not installed"}), 503
 
     multi_sample = data.get("multi_sample", 1)
     if not isinstance(multi_sample, int) or multi_sample < 1 or multi_sample > 20:
-        return jsonify({"error": "multi_sample must be an integer between 1 and 20"}), 400
+        return (
+            jsonify({"error": "multi_sample must be an integer between 1 and 20"}),
+            400,
+        )
 
     job_id = runner.submit(
         query=query,
@@ -181,18 +198,22 @@ def upload():
 def config():
     """Return current pipeline configuration (safe subset)."""
     from smf_swarm.config import get_config
+
     cfg = get_config()
-    return jsonify({
-        "llm_provider": cfg.llm.provider,
-        "model": cfg.llm.model,
-        "default_mode": cfg.default_mode,
-        "default_domain": cfg.default_domain,
-        "social_agents": cfg.social_agents,
-        "social_rounds": cfg.social_rounds,
-    })
+    return jsonify(
+        {
+            "llm_provider": cfg.llm.provider,
+            "model": cfg.llm.model,
+            "default_mode": cfg.default_mode,
+            "default_domain": cfg.default_domain,
+            "social_agents": cfg.social_agents,
+            "social_rounds": cfg.social_rounds,
+        }
+    )
 
 
 # ─── Register ─────────────────────────────────────
+
 
 def register_routes(app):
     """Attach API blueprint to Flask app."""

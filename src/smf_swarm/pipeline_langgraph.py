@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import os
 import time
-from typing import Any, Callable, Optional
+from typing import Any, Callable
 from datetime import datetime
 
 from smf_swarm.pipeline import Pipeline, PipelineResult
@@ -27,6 +27,7 @@ try:
     from langgraph.graph import StateGraph, START, END
     from langgraph.checkpoint.memory import MemorySaver
     from langgraph.types import RetryPolicy
+
     LANGGRAPH_AVAILABLE = True
 except ImportError:
     StateGraph = START = END = None  # type: ignore[assignment,misc]
@@ -36,11 +37,12 @@ except ImportError:
 
 from typing_extensions import TypedDict
 
-
 # ── Shared State Schema ──────────────────────────────────────
+
 
 class SwarmState(TypedDict, total=False):
     """LangGraph shared state — mirrors PipelineResult + controls."""
+
     # Inputs
     query: str
     domain: str
@@ -84,6 +86,7 @@ class SwarmState(TypedDict, total=False):
 
 
 # ── Utility ──────────────────────────────────────────────────
+
 
 def _timing_tracker(pipeline: Pipeline, state: SwarmState, node_name: str) -> dict:
     """Thin wrapper: time a pipeline node, store in state["node_timings"]."""
@@ -129,6 +132,7 @@ def _make_node(pipeline: Pipeline, name: str, method_name: str | None = None) ->
 
 # ── Conditional Routers ──────────────────────────────────────
 
+
 def _router_after_baseline(state: SwarmState) -> str:
     if not state.get("ok", True):
         return "reporter"
@@ -163,6 +167,7 @@ def _router_after_merge(state: SwarmState) -> str:
 
 
 # ── Graph Builder ──────────────────────────────────────────────
+
 
 def build_pipeline_graph(pipeline: Pipeline) -> StateGraph | None:
     """Compile a LangGraph StateGraph from an existing Pipeline.
@@ -245,6 +250,7 @@ def build_pipeline_graph(pipeline: Pipeline) -> StateGraph | None:
 
 # ── LangGraphPipeline (public API) ─────────────────────────────
 
+
 class LangGraphPipeline:
     """Production adapter: run predictions through LangGraph StateGraph.
 
@@ -285,7 +291,7 @@ class LangGraphPipeline:
         mode = (mode or cfg.default_mode).lower()
         domain = domain or cfg.default_domain
         if run_social is None:
-            run_social = (mode == "full")
+            run_social = mode == "full"
 
         t0 = time.time()
 
@@ -358,7 +364,7 @@ class LangGraphPipeline:
             confidence=round(float(final_conf), 4),
             prediction_text=latest_state.get("final_report", ""),
             summary=latest_state.get("executive_summary", "")
-                or latest_state.get("final_report", "")[:300],
+            or latest_state.get("final_report", "")[:300],
             risk=latest_state.get("risk_assessment", ""),
             data_quality=latest_state.get("data_quality_score", 0.0),
             duration_s=round(t1 - t0, 1),
@@ -400,7 +406,11 @@ class LangGraphPipeline:
                 thread_id=thread_id,
                 stream_callback=lambda node, up: None,  # we capture below
             )
-            yield {"node": "reporter", "update": {"final_report": result.prediction_text}, "done": True}
+            yield {
+                "node": "reporter",
+                "update": {"final_report": result.prediction_text},
+                "done": True,
+            }
         except Exception as exc:
             yield {"error": str(exc)}
 
@@ -427,9 +437,12 @@ class LangGraphPipeline:
                 query=st.get("query", ""),
                 domain=st.get("domain", ""),
                 mode=st.get("mode", ""),
-                confidence=round(st.get("final_confidence", st.get("confidence", 0.0)), 4),
+                confidence=round(
+                    st.get("final_confidence", st.get("confidence", 0.0)), 4
+                ),
                 prediction_text=st.get("final_report", ""),
-                summary=st.get("executive_summary", "") or st.get("final_report", "")[:300],
+                summary=st.get("executive_summary", "")
+                or st.get("final_report", "")[:300],
                 risk=st.get("risk_assessment", ""),
                 data_quality=st.get("data_quality_score", 0.0),
                 duration_s=0.0,  # resume doesn't know original t0 without storage
@@ -446,7 +459,10 @@ class LangGraphPipeline:
 
 # ── Soft-switch helper ───────────────────────────────────────
 
-def create_pipeline(prefer_langgraph: bool | None = None) -> Pipeline | LangGraphPipeline:
+
+def create_pipeline(
+    prefer_langgraph: bool | None = None,
+) -> Pipeline | LangGraphPipeline:
     """Factory returning either Pipeline or LangGraphPipeline.
 
     Args:
@@ -454,9 +470,15 @@ def create_pipeline(prefer_langgraph: bool | None = None) -> Pipeline | LangGrap
             If False or None, fallback to classic Pipeline when unavailable.
     """
     if prefer_langgraph is True and not LANGGRAPH_AVAILABLE:
-        raise ImportError("LANGGRAPH_DISABLE is not set but langgraph is not installed.")
+        raise ImportError(
+            "LANGGRAPH_DISABLE is not set but langgraph is not installed."
+        )
 
-    env_disable = os.environ.get("LANGGRAPH_DISABLE", "").lower() in ("1", "true", "yes")
+    env_disable = os.environ.get("LANGGRAPH_DISABLE", "").lower() in (
+        "1",
+        "true",
+        "yes",
+    )
 
     if prefer_langgraph is False or env_disable or not LANGGRAPH_AVAILABLE:
         return Pipeline()

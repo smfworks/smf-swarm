@@ -7,10 +7,9 @@ No external dependencies beyond Flask.
 from __future__ import annotations
 
 import time
-from functools import wraps
 from typing import Optional
 
-from flask import request, jsonify
+from flask import request
 
 
 class RateLimiter:
@@ -38,7 +37,9 @@ _rate_limiter: Optional[RateLimiter] = None
 _auth_token: Optional[str] = None
 
 
-def init_auth(token: Optional[str] = None, rate_limit: Optional[tuple[int, int]] = None):
+def init_auth(
+    token: Optional[str] = None, rate_limit: Optional[tuple[int, int]] = None
+):
     """Initialize web auth and rate limiting.
 
     Args:
@@ -69,5 +70,7 @@ def check_rate_limit(key: str) -> Optional[tuple]:
     if _rate_limiter is None:
         return None
     if not _rate_limiter.is_allowed(key):
-        return {"error": f"Rate limit exceeded — {_rate_limiter.max_requests} requests per {_rate_limiter.window}s"}, 429
+        return {
+            "error": f"Rate limit exceeded — {_rate_limiter.max_requests} requests per {_rate_limiter.window}s"
+        }, 429
     return None

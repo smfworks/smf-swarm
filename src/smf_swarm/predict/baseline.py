@@ -34,6 +34,7 @@ class StatisticalBaseline:
         if self._prophet is None:
             try:
                 from prophet import Prophet  # noqa: F401
+
                 self._prophet = True
             except ImportError:
                 self._prophet = False
@@ -44,6 +45,7 @@ class StatisticalBaseline:
         if self._statsmodels is None:
             try:
                 import statsmodels.api as sm  # noqa: F401
+
                 self._statsmodels = True
             except ImportError:
                 self._statsmodels = False
@@ -54,12 +56,15 @@ class StatisticalBaseline:
         if self._sklearn is None:
             try:
                 import sklearn  # noqa: F401
+
                 self._sklearn = True
             except ImportError:
                 self._sklearn = False
         return self._sklearn
 
-    def forecast(self, query: str, raw_data: str, features: Optional[str] = None) -> dict:
+    def forecast(
+        self, query: str, raw_data: str, features: Optional[str] = None
+    ) -> dict:
         """Attempt a statistical forecast from raw text data.
 
         Returns a dict:
@@ -99,7 +104,7 @@ class StatisticalBaseline:
         """Try to pull yyyy-mm-dd / value pairs from text or JSON snippets."""
         # Try to extract date: value pairs
         matches = re.findall(
-            r'(\d{4}-\d{2}-\d{2})[\s:]?\s*([\d,.]+)',
+            r"(\d{4}-\d{2}-\d{2})[\s:]?\s*([\d,.]+)",
             raw_data,
             re.IGNORECASE,
         )
@@ -113,7 +118,10 @@ class StatisticalBaseline:
                 obj = json.loads(json_search.group(1))
                 if isinstance(obj.get("data"), list) and len(obj["data"]) >= 3:
                     return [
-                        (str(item.get("date", i)), float(item.get("value", item.get("v", 0))))
+                        (
+                            str(item.get("date", i)),
+                            float(item.get("value", item.get("v", 0))),
+                        )
                         for i, item in enumerate(obj["data"])
                     ]
             except (json.JSONDecodeError, ValueError):
@@ -141,6 +149,7 @@ class StatisticalBaseline:
         from prophet import Prophet
 
         import pandas as pd
+
         df = pd.DataFrame(series, columns=["ds", "y"])
         try:
             m = Prophet(yearly_seasonality=False, daily_seasonality=False)
@@ -149,7 +158,7 @@ class StatisticalBaseline:
             forecast = m.predict(future)
             yhat = forecast["yhat"].iloc[-1]
             # Confidence estimated from model fit uncertainty
-            ci_width = (forecast["yhat_upper"].iloc[-1] - forecast["yhat_lower"].iloc[-1])
+            ci_width = forecast["yhat_upper"].iloc[-1] - forecast["yhat_lower"].iloc[-1]
             conf = max(0.0, min(1.0, 1.0 - (ci_width / (2 * abs(yhat) + 1e-6))))
             return {
                 "method": "prophet",
@@ -159,10 +168,15 @@ class StatisticalBaseline:
                 "error": None,
             }
         except Exception as e:
-            return {"method": "prophet", "confidence": None, "prediction": "", "series_length": len(series), "error": str(e)}
+            return {
+                "method": "prophet",
+                "confidence": None,
+                "prediction": "",
+                "series_length": len(series),
+                "error": str(e),
+            }
 
     def _run_arima(self, series: list[tuple[str, float]]) -> dict:
-        import pandas as pd
         import statsmodels.api as sm
 
         try:
@@ -182,7 +196,13 @@ class StatisticalBaseline:
                 "error": None,
             }
         except Exception as e:
-            return {"method": "arima", "confidence": None, "prediction": "", "series_length": len(series), "error": str(e)}
+            return {
+                "method": "arima",
+                "confidence": None,
+                "prediction": "",
+                "series_length": len(series),
+                "error": str(e),
+            }
 
     def _run_trend(self, series: list[tuple[str, float]]) -> dict:
         """Linear trend with scikit-learn."""
@@ -215,11 +235,35 @@ class StatisticalBaseline:
                 "error": str(e),
             }
 
-    def _heuristic_from_features(self, raw_data: str, features: Optional[str] = None) -> Optional[float]:
+    def _heuristic_from_features(
+        self, raw_data: str, features: Optional[str] = None
+    ) -> Optional[float]:
         """From raw text, count bullish/bearish keyword balance → a rough confidence proxy."""
         text = (raw_data + " " + (features or "")).lower()
-        bullish = ["growth", "surge", "exceed", "accelerate", "bullish", "optimistic", "increase", "rise", "up", "gain"]
-        bearish = ["decline", "fall", "below", "risk", "bearish", "pessimistic", "decrease", "drop", "down", "loss"]
+        bullish = [
+            "growth",
+            "surge",
+            "exceed",
+            "accelerate",
+            "bullish",
+            "optimistic",
+            "increase",
+            "rise",
+            "up",
+            "gain",
+        ]
+        bearish = [
+            "decline",
+            "fall",
+            "below",
+            "risk",
+            "bearish",
+            "pessimistic",
+            "decrease",
+            "drop",
+            "down",
+            "loss",
+        ]
         b = sum(1 for w in bullish if w in text)
         a = sum(1 for w in bearish if w in text)
         total = b + a

@@ -42,6 +42,7 @@ _LANGGRAPH_PIPELINE = None
 _LANGGRAPH_AVAILABLE = False
 try:
     from smf_swarm.pipeline_langgraph import LangGraphPipeline
+
     _LANGGRAPH_PIPELINE = LangGraphPipeline
     _LANGGRAPH_AVAILABLE = True
 except ImportError:
@@ -51,9 +52,11 @@ except ImportError:
 
 # ─── Result objects ─────────────────────────────
 
+
 @dataclass
 class PipelineResult:
     """Structured output from any prediction run."""
+
     query: str
     domain: str
     mode: str
@@ -73,6 +76,7 @@ class PipelineResult:
 
 # ─── Pipeline ─────────────────────────────────────
 
+
 class Pipeline:
     """High-level interface for running predictions."""
 
@@ -83,13 +87,14 @@ class Pipeline:
         self.social = SocialSimulator(self.llm)
         self.monitor = SwarmMonitor()
         # Initialize LLM response cache
-        from smf_swarm.cache import LLMCache
+
         self._cache = LLMCache()
         # Backtest store for calibration tracking
         self._backtest = BacktestStore()
         # Statistical baseline (optional [predict] extras)
         try:
             from smf_swarm.predict.baseline import StatisticalBaseline
+
             self._baseline: "StatisticalBaseline | None" = StatisticalBaseline()
         except Exception:
             self._baseline = None
@@ -113,7 +118,11 @@ class Pipeline:
                 via LANGGRAPH_AUTO=1 when langgraph is installed.
                 Environment LANGGRAPH_DISABLE=1 overrides all.
         """
-        env_disable = os.environ.get("LANGGRAPH_DISABLE", "").lower() in ("1", "true", "yes")
+        env_disable = os.environ.get("LANGGRAPH_DISABLE", "").lower() in (
+            "1",
+            "true",
+            "yes",
+        )
         env_auto = os.environ.get("LANGGRAPH_AUTO", "").lower() in ("1", "true", "yes")
         use_langgraph = False
 
@@ -140,7 +149,7 @@ class Pipeline:
         mode = (mode or self.cfg.default_mode).lower()
         domain = domain or self.cfg.default_domain
         if run_social is None:
-            run_social = (mode == "full")
+            run_social = mode == "full"
 
         t0 = time.time()
         self.monitor.reset()
@@ -224,8 +233,12 @@ class Pipeline:
                 self.cfg.llm.temperature = temp
                 st = self._run_state_machine(query, mode, domain, run_social)
                 states.append(st)
-                confidences.append(st.get("final_confidence", st.get("confidence", 0.5)))
-                print(f"  [Multi-sample] Run {i + 1}/{n} temp={temp:.2f} conf={confidences[-1]:.2f}")
+                confidences.append(
+                    st.get("final_confidence", st.get("confidence", 0.5))
+                )
+                print(
+                    f"  [Multi-sample] Run {i + 1}/{n} temp={temp:.2f} conf={confidences[-1]:.2f}"
+                )
             except Exception as e:
                 print(f"  [Multi-sample] Run {i + 1}/{n} FAILED: {e}")
             finally:
@@ -271,11 +284,16 @@ class Pipeline:
         self._cache.set(messages, resp, **kwargs)
         return resp
 
-    def _run_state_machine(self, query: str, mode: str, domain: str, run_social: bool) -> dict:
+    def _run_state_machine(
+        self, query: str, mode: str, domain: str, run_social: bool
+    ) -> dict:
         """Execute sequential node graph."""
         state: dict = {
-            "query": query, "domain": domain, "mode": mode,
-            "run_social": run_social, "ok": True,
+            "query": query,
+            "domain": domain,
+            "mode": mode,
+            "run_social": run_social,
+            "ok": True,
         }
         try:
             # ── Gather ─────────────────────────
@@ -299,12 +317,14 @@ class Pipeline:
 
             if mode in ("debate", "full"):
                 # ── Debate ───────────────────────
-                deb_state = self.debate.run({
-                    "query": query,
-                    "domain": domain,
-                    "features": state.get("features", ""),
-                    "data_quality": state.get("data_quality_score", 0.5),
-                })
+                deb_state = self.debate.run(
+                    {
+                        "query": query,
+                        "domain": domain,
+                        "features": state.get("features", ""),
+                        "data_quality": state.get("data_quality_score", 0.5),
+                    }
+                )
                 state.update(deb_state)
 
             if mode == "full":
@@ -333,11 +353,15 @@ class Pipeline:
             # Optional tool search
             try:
                 from smf_swarm.tools import ToolKit
+
                 toolkit = ToolKit()
                 if toolkit.search_available:
                     search = toolkit.duckduckgo_search(state["query"], max_results=3)
                     if search.get("results"):
-                        snippets = "\n".join(f"- {r['title']}: {r['body'][:200]}" for r in search["results"])
+                        snippets = "\n".join(
+                            f"- {r['title']}: {r['body'][:200]}"
+                            for r in search["results"]
+                        )
                         enriched = f"\n\n--- Web Search Snippets ---\n{snippets}\n"
             except Exception:
                 pass
@@ -345,11 +369,14 @@ class Pipeline:
             rag_context = ""
             try:
                 from smf_swarm.rag import RAGStore
+
                 rag = RAGStore()
                 if rag.available:
                     rag_results = rag.query(state["query"], n_results=3)
                     if rag_results.get("results"):
-                        chunks = "\n".join(f"- {r['text'][:200]}" for r in rag_results["results"])
+                        chunks = "\n".join(
+                            f"- {r['text'][:200]}" for r in rag_results["results"]
+                        )
                         rag_context = f"\n\n--- Uploaded Reports ---\n{chunks}\n"
             except Exception:
                 pass
@@ -478,13 +505,19 @@ class Pipeline:
                     "baseline_confidence": result.get("confidence"),
                 }
             except Exception as e:
-                return {"baseline": None, "baseline_method": "error", "baseline_error": str(e)}
+                return {
+                    "baseline": None,
+                    "baseline_method": "error",
+                    "baseline_error": str(e),
+                }
 
     def _reporter(self, state: dict) -> dict:
         with self.monitor.track("reporter"):
             final_conf = state.get("final_confidence", state.get("confidence", 0.5))
             if state.get("confidence_modifier") is not None:
-                final_conf = max(0.1, min(0.95, final_conf + state["confidence_modifier"] * 0.2))
+                final_conf = max(
+                    0.1, min(0.95, final_conf + state["confidence_modifier"] * 0.2)
+                )
 
             # Build sections
             social_section = ""
@@ -518,7 +551,8 @@ class Pipeline:
             return {
                 "final_report": content,
                 "executive_summary": parsed["executive_summary"] or content[:300],
-                "risk_assessment": parsed["risk_assessment"] or "See prediction for risks",
+                "risk_assessment": parsed["risk_assessment"]
+                or "See prediction for risks",
                 "final_confidence": parsed.get("confidence", final_conf),
                 "status": "COMPLETED",
             }

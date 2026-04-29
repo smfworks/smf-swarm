@@ -14,7 +14,7 @@ import pytest
 import os
 import sys
 from pathlib import Path
-from unittest.mock import MagicMock, patch, PropertyMock
+from unittest.mock import MagicMock, patch
 
 _repo = Path(__file__).resolve().parent.parent
 _src = _repo / "src"
@@ -26,9 +26,7 @@ from smf_swarm.pipeline_langgraph import (
     LangGraphPipeline,
     create_pipeline,
     LANGGRAPH_AVAILABLE,
-    SwarmState,
 )
-
 
 # ── Constructor ────────────────────────────────────────────────
 

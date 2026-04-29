@@ -14,6 +14,7 @@ async def health():
     langgraph_ok = False
     try:
         from smf_swarm.pipeline import _LANGGRAPH_AVAILABLE
+
         langgraph_ok = _LANGGRAPH_AVAILABLE
     except Exception:
         pass
@@ -28,6 +29,7 @@ async def health():
 @router.get("/config", response_model=ConfigResponse)
 async def config():
     from smf_swarm.config import get_config
+
     cfg = get_config()
     return ConfigResponse(
         llm_provider=cfg.llm.provider,

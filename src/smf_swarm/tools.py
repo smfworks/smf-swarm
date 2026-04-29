@@ -12,7 +12,6 @@ Usage:
 
 from __future__ import annotations
 
-import subprocess
 import traceback
 from typing import Optional
 
@@ -29,6 +28,7 @@ class ToolKit:
         if self._ddgs is None:
             try:
                 from duckduckgo_search import DDGS
+
                 self._ddgs = DDGS()
             except ImportError:
                 self._ddgs = False
@@ -52,24 +52,52 @@ class ToolKit:
                 "tool": "duckduckgo_search",
                 "query": query,
                 "results": [
-                    {"title": r.get("title", ""), "href": r.get("href", ""), "body": r.get("body", "")}
+                    {
+                        "title": r.get("title", ""),
+                        "href": r.get("href", ""),
+                        "body": r.get("body", ""),
+                    }
                     for r in results
                 ],
                 "error": None,
             }
         except Exception as e:
-            return {"tool": "duckduckgo_search", "query": query, "results": [], "error": str(e)}
+            return {
+                "tool": "duckduckgo_search",
+                "query": query,
+                "results": [],
+                "error": str(e),
+            }
 
     def python_repl(self, code: str) -> dict:
         """Execute Python math/finance in an isolated REPL."""
         # Restricted globals for safety
         safe_globals = {
             "__builtins__": {
-                "abs": abs, "all": all, "any": any, "bool": bool, "complex": complex,
-                "dict": dict, "divmod": divmod, "float": float, "int": int, "len": len,
-                "list": list, "max": max, "min": min, "pow": pow, "range": range,
-                "round": round, "sorted": sorted, "str": str, "sum": sum, "tuple": tuple,
-                "zip": zip, "enumerate": enumerate, "filter": filter, "map": map,
+                "abs": abs,
+                "all": all,
+                "any": any,
+                "bool": bool,
+                "complex": complex,
+                "dict": dict,
+                "divmod": divmod,
+                "float": float,
+                "int": int,
+                "len": len,
+                "list": list,
+                "max": max,
+                "min": min,
+                "pow": pow,
+                "range": range,
+                "round": round,
+                "sorted": sorted,
+                "str": str,
+                "sum": sum,
+                "tuple": tuple,
+                "zip": zip,
+                "enumerate": enumerate,
+                "filter": filter,
+                "map": map,
                 "print": print,
             }
         }
@@ -77,7 +105,9 @@ class ToolKit:
         output_lines = []
 
         # Capture stdout
-        import io, sys
+        import io
+        import sys
+
         old_stdout = sys.stdout
         sys.stdout = buffer = io.StringIO()
         try:
@@ -90,10 +120,12 @@ class ToolKit:
                 "code": code,
                 "stdout": captured.strip(),
                 "last_value": str(last_value) if last_value is not None else None,
-                "locals": {k: str(v) for k, v in safe_locals.items() if not k.startswith("__")},
+                "locals": {
+                    k: str(v) for k, v in safe_locals.items() if not k.startswith("__")
+                },
                 "error": None,
             }
-        except Exception as e:
+        except Exception:
             result = {
                 "tool": "python_repl",
                 "code": code,

@@ -17,6 +17,7 @@ from typing import Optional
 def _try_import_psutil():
     try:
         import psutil
+
         return psutil
     except Exception:
         return None
@@ -25,6 +26,7 @@ def _try_import_psutil():
 @dataclass
 class HardwareProfile:
     """Snapshot of available hardware."""
+
     total_ram_gb: float
     available_ram_gb: float
     cpu_cores: int
@@ -55,12 +57,13 @@ def detect_hardware() -> HardwareProfile:
 
 # ── RAM ──────────────────────────────────────────
 
+
 def _detect_ram_total() -> float:
     """Total system RAM in GB."""
     psutil = _try_import_psutil()
     if psutil:
         try:
-            return psutil.virtual_memory().total / (1024 ** 3)
+            return psutil.virtual_memory().total / (1024**3)
         except Exception:
             pass
     if sys.platform == "win32":
@@ -73,7 +76,7 @@ def _detect_ram_available() -> float:
     psutil = _try_import_psutil()
     if psutil:
         try:
-            return psutil.virtual_memory().available / (1024 ** 3)
+            return psutil.virtual_memory().available / (1024**3)
         except Exception:
             pass
     if sys.platform == "win32":
@@ -85,7 +88,9 @@ def _win32_mem() -> Optional[float]:
     """Windows RAM via ctypes (no external deps)."""
     try:
         import ctypes
+
         kernel32 = ctypes.windll.kernel32
+
         class MEMORYSTATUSEX(ctypes.Structure):
             _fields_ = [
                 ("dwLength", ctypes.c_ulong),
@@ -98,10 +103,11 @@ def _win32_mem() -> Optional[float]:
                 ("ullAvailVirtual", ctypes.c_ulonglong),
                 ("ullAvailExtendedVirtual", ctypes.c_ulonglong),
             ]
+
         mem = MEMORYSTATUSEX()
         mem.dwLength = ctypes.sizeof(mem)
         kernel32.GlobalMemoryStatusEx(ctypes.byref(mem))
-        return mem.ullTotalPhys / (1024 ** 3)
+        return mem.ullTotalPhys / (1024**3)
     except Exception:
         pass
     return None
@@ -113,7 +119,7 @@ def _get_meminfo(key: str) -> Optional[float]:
             for line in f:
                 if line.startswith(key):
                     kb = int(line.split()[1])
-                    return kb / (1024 ** 2)  # Convert to GB
+                    return kb / (1024**2)  # Convert to GB
     except (OSError, ValueError):
         pass
     return None
@@ -122,17 +128,21 @@ def _get_meminfo(key: str) -> Optional[float]:
 def _sysctl_mem() -> Optional[float]:
     try:
         import ctypes
+
         libc = ctypes.CDLL("")
         total = ctypes.c_uint64(0)
         size = ctypes.c_size_t(ctypes.sizeof(total))
-        libc.sysctlbyname(b"hw.memsize", ctypes.byref(total), ctypes.byref(size), None, 0)
-        return total.value / (1024 ** 3)
+        libc.sysctlbyname(
+            b"hw.memsize", ctypes.byref(total), ctypes.byref(size), None, 0
+        )
+        return total.value / (1024**3)
     except Exception:
         pass
     return None
 
 
 # ── CPU ──────────────────────────────────────────
+
 
 def _detect_cpu_cores() -> int:
     return os.cpu_count() or 4
@@ -149,6 +159,7 @@ def _detect_cpu_threads() -> int:
 
 
 # ── GPU / VRAM ───────────────────────────────────
+
 
 def _detect_vram() -> Optional[float]:
     return _nvidia_vram() or _amd_vram() or _apple_vram() or _win32_vram()
@@ -169,7 +180,10 @@ def _win32_vram() -> Optional[float]:
     try:
         result = subprocess.run(
             ["wmic", "path", "Win32_VideoController", "get", "AdapterRAM", "/value"],
-            capture_output=True, text=True, timeout=5, shell=True,
+            capture_output=True,
+            text=True,
+            timeout=5,
+            shell=True,
         )
         if result.returncode == 0:
             match = re.search(r"AdapterRAM=(\d+)", result.stdout)
@@ -177,8 +191,8 @@ def _win32_vram() -> Optional[float]:
                 bytes_val = int(match.group(1))
                 # Handle signed int32 wrap-around for >2GB (wmic quirk)
                 if bytes_val < 0:
-                    bytes_val += 2 ** 32
-                return bytes_val / (1024 ** 3)
+                    bytes_val += 2**32
+                return bytes_val / (1024**3)
     except (FileNotFoundError, subprocess.TimeoutExpired, ValueError):
         pass
     return None
@@ -191,7 +205,10 @@ def _win32_gpu_name() -> Optional[str]:
     try:
         result = subprocess.run(
             ["wmic", "path", "Win32_VideoController", "get", "Name", "/value"],
-            capture_output=True, text=True, timeout=5, shell=True,
+            capture_output=True,
+            text=True,
+            timeout=5,
+            shell=True,
         )
         if result.returncode == 0:
             match = re.search(r"Name=(.+)", result.stdout)
@@ -206,10 +223,14 @@ def _nvidia_vram() -> Optional[float]:
     try:
         result = subprocess.run(
             ["nvidia-smi", "--query-gpu=memory.total", "--format=csv,noheader,nounits"],
-            capture_output=True, text=True, timeout=5,
+            capture_output=True,
+            text=True,
+            timeout=5,
         )
         if result.returncode == 0 and result.stdout.strip():
-            max_vram = max(float(line.strip()) for line in result.stdout.strip().splitlines())
+            max_vram = max(
+                float(line.strip()) for line in result.stdout.strip().splitlines()
+            )
             return max_vram / 1024  # Convert MB → GB
     except (FileNotFoundError, subprocess.TimeoutExpired, ValueError):
         pass
@@ -220,7 +241,9 @@ def _nvidia_name() -> Optional[str]:
     try:
         result = subprocess.run(
             ["nvidia-smi", "--query-gpu=name", "--format=csv,noheader"],
-            capture_output=True, text=True, timeout=5,
+            capture_output=True,
+            text=True,
+            timeout=5,
         )
         if result.returncode == 0 and result.stdout.strip():
             return result.stdout.strip().splitlines()[0].strip()
@@ -233,7 +256,9 @@ def _amd_vram() -> Optional[float]:
     try:
         result = subprocess.run(
             ["radeontop", "-d", "-"],
-            capture_output=True, text=True, timeout=3,
+            capture_output=True,
+            text=True,
+            timeout=3,
         )
         # radeontop output not easily machine-parseable; skip
     except (FileNotFoundError, subprocess.TimeoutExpired):
@@ -242,7 +267,9 @@ def _amd_vram() -> Optional[float]:
     try:
         result = subprocess.run(
             ["rocm-smi", "--showmeminfo", "VRAM"],
-            capture_output=True, text=True, timeout=5,
+            capture_output=True,
+            text=True,
+            timeout=5,
         )
         if result.returncode == 0:
             match = re.search(r"(\d+)\s*MB", result.stdout)
@@ -257,7 +284,9 @@ def _amd_name() -> Optional[str]:
     try:
         result = subprocess.run(
             ["rocm-smi", "--showproductname"],
-            capture_output=True, text=True, timeout=5,
+            capture_output=True,
+            text=True,
+            timeout=5,
         )
         if result.returncode == 0 and result.stdout.strip():
             return result.stdout.strip().splitlines()[0].strip()
@@ -272,7 +301,9 @@ def _apple_vram() -> Optional[float]:
         try:
             result = subprocess.run(
                 ["system_profiler", "SPDisplaysDataType"],
-                capture_output=True, text=True, timeout=5,
+                capture_output=True,
+                text=True,
+                timeout=5,
             )
             if result.returncode == 0:
                 # On Apple Silicon, VRAM = shared system memory
@@ -289,7 +320,9 @@ def _apple_name() -> Optional[str]:
         try:
             result = subprocess.run(
                 ["system_profiler", "SPDisplaysDataType"],
-                capture_output=True, text=True, timeout=5,
+                capture_output=True,
+                text=True,
+                timeout=5,
             )
             if result.returncode == 0:
                 match = re.search(r"Chipset Model:\s*(.+)", result.stdout)
@@ -301,6 +334,7 @@ def _apple_name() -> Optional[str]:
 
 
 # ── OS ───────────────────────────────────────────
+
 
 def _detect_os_name() -> str:
     if sys.platform == "linux":
@@ -322,6 +356,7 @@ def _detect_os_name() -> str:
 def _detect_os_version() -> str:
     try:
         import platform
+
         return platform.release()
     except Exception:
         return ""

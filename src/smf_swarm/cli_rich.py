@@ -7,15 +7,14 @@ Only activates if `rich` is installed.
 from __future__ import annotations
 
 import time
-from typing import Optional
 
 from smf_swarm.pipeline import Pipeline, PipelineResult
-from smf_swarm.monitor import SwarmMonitor
 
 
 def is_available() -> bool:
     try:
         import rich
+
         return True
     except ImportError:
         return False
@@ -33,7 +32,14 @@ def run_prediction_rich(
     from rich.live import Live
     from rich.table import Table
     from rich.panel import Panel
-    from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TaskProgressColumn, TimeRemainingColumn
+    from rich.progress import (
+        Progress,
+        SpinnerColumn,
+        TextColumn,
+        BarColumn,
+        TaskProgressColumn,
+        TimeRemainingColumn,
+    )
     from rich.layout import Layout
     from rich.text import Text
     from rich import box
@@ -67,13 +73,17 @@ def run_prediction_rich(
     header_text = Text()
     header_text.append("SMF Swarm", style="bold yellow")
     header_text.append("  |  ")
-    header_text.append(f"Query: {query[:60]}{'...' if len(query) > 60 else ''}", style="white")
+    header_text.append(
+        f"Query: {query[:60]}{'...' if len(query) > 60 else ''}", style="white"
+    )
     header_text.append("  |  ")
     header_text.append(f"Mode: {mode}", style="cyan")
     header_text.append("  |  ")
     header_text.append(f"Domain: {domain}", style="green")
     layout["header"].update(Panel(header_text, border_style="yellow", box=box.ROUNDED))
-    layout["progress"].update(Panel(progress, border_style="cyan", box=box.ROUNDED, title="Progress"))
+    layout["progress"].update(
+        Panel(progress, border_style="cyan", box=box.ROUNDED, title="Progress")
+    )
 
     # Body panel starts empty
     body_table = Table(box=box.ROUNDED, border_style="dim", pad_edge=False)
@@ -81,7 +91,9 @@ def run_prediction_rich(
     body_table.add_column("Status", style="white", width=12)
     body_table.add_column("Duration", style="yellow", width=10)
     body_table.add_column("Output", style="dim")
-    layout["body"].update(Panel(body_table, border_style="blue", box=box.ROUNDED, title="Nodes"))
+    layout["body"].update(
+        Panel(body_table, border_style="blue", box=box.ROUNDED, title="Nodes")
+    )
 
     results: list[dict] = []
 
@@ -90,9 +102,26 @@ def run_prediction_rich(
         original_run = pipeline._run_state_machine
         node_index = 0
         nodes = {
-            "standard": ["data_gatherer", "feature_engineer", "reflection", "model_runner", "validator", "reporter"],
+            "standard": [
+                "data_gatherer",
+                "feature_engineer",
+                "reflection",
+                "model_runner",
+                "validator",
+                "reporter",
+            ],
             "debate": ["data_gatherer", "feature_engineer", "debate", "reporter"],
-            "full": ["data_gatherer", "feature_engineer", "reflection", "model_runner", "validator", "debate", "merge", "social_simulation", "reporter"],
+            "full": [
+                "data_gatherer",
+                "feature_engineer",
+                "reflection",
+                "model_runner",
+                "validator",
+                "debate",
+                "merge",
+                "social_simulation",
+                "reporter",
+            ],
         }.get(mode, [])
         total_nodes = len(nodes)
 
@@ -112,24 +141,37 @@ def run_prediction_rich(
                     duration = time.time() - t0
                     node_index += 1
                     pct = int((node_index / total_nodes) * 100) if total_nodes else 50
-                    progress.update(task, advance=100/total_nodes if total_nodes else 10)
+                    progress.update(
+                        task, advance=100 / total_nodes if total_nodes else 10
+                    )
                     body_table.rows[-1].columns[1]._text = [Text("Done", style="green")]
-                    body_table.rows[-1].columns[2]._text = [Text(f"{duration:.1f}s", style="yellow")]
+                    body_table.rows[-1].columns[2]._text = [
+                        Text(f"{duration:.1f}s", style="yellow")
+                    ]
                     return result
                 except Exception as e:
                     body_table.rows[-1].columns[1]._text = [Text("Error", style="red")]
-                    body_table.rows[-1].columns[3]._text = [Text(str(e)[:60], style="red")]
+                    body_table.rows[-1].columns[3]._text = [
+                        Text(str(e)[:60], style="red")
+                    ]
                     raise
+
             return wrapped
 
         originals = {}
         for node_name in nodes:
             if hasattr(pipeline, f"_{node_name}"):
                 originals[node_name] = getattr(pipeline, f"_{node_name}")
-                setattr(pipeline, f"_{node_name}", _patch_node(node_name, originals[node_name]))
+                setattr(
+                    pipeline,
+                    f"_{node_name}",
+                    _patch_node(node_name, originals[node_name]),
+                )
 
         try:
-            result = pipeline.run(query=query, mode=mode, domain=domain, multi_sample=multi_sample)
+            result = pipeline.run(
+                query=query, mode=mode, domain=domain, multi_sample=multi_sample
+            )
         finally:
             for node_name, orig in originals.items():
                 setattr(pipeline, f"_{node_name}", orig)
@@ -143,8 +185,13 @@ def run_prediction_rich(
         final_table.add_row("Data Quality", f"{result.data_quality:.2f}")
         final_table.add_row("Duration", f"{result.duration_s:.0f}s")
         final_table.add_row("Health", f"{result.health_score:.1f}")
-        final_table.add_row("Summary", result.summary[:200] + ("..." if len(result.summary) > 200 else ""))
-        layout["body"].update(Panel(final_table, border_style="green", box=box.ROUNDED, title="Result"))
+        final_table.add_row(
+            "Summary",
+            result.summary[:200] + ("..." if len(result.summary) > 200 else ""),
+        )
+        layout["body"].update(
+            Panel(final_table, border_style="green", box=box.ROUNDED, title="Result")
+        )
         time.sleep(1.5)
 
     return result

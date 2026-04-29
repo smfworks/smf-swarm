@@ -21,7 +21,9 @@ class AuthManager:
             return
         auth = request.headers.get("authorization", "")
         if not auth.lower().startswith("bearer "):
-            raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail="Bearer token required")
+            raise HTTPException(
+                status.HTTP_401_UNAUTHORIZED, detail="Bearer token required"
+            )
         provided = auth[7:].strip()
         if provided != self._token:
             raise HTTPException(status.HTTP_403_FORBIDDEN, detail="Invalid token")

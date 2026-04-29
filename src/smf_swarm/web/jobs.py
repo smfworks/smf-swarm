@@ -21,6 +21,7 @@ from smf_swarm.config import get_config
 @dataclass
 class JobEvent:
     """A single event emitted during pipeline execution."""
+
     type: str  # progress | result | error | log
     node: Optional[str] = None
     status: Optional[str] = None
@@ -47,6 +48,7 @@ class JobEvent:
 @dataclass
 class Job:
     """A prediction job in the queue."""
+
     job_id: str
     query: str
     mode: str
@@ -80,10 +82,26 @@ class JobRunner:
     ]
 
     MODE_NODES = {
-        "standard": ["data_gatherer", "feature_engineer", "reflection", "model_runner", "validator", "reporter"],
+        "standard": [
+            "data_gatherer",
+            "feature_engineer",
+            "reflection",
+            "model_runner",
+            "validator",
+            "reporter",
+        ],
         "debate": ["data_gatherer", "feature_engineer", "debate", "reporter"],
-        "full": ["data_gatherer", "feature_engineer", "reflection", "model_runner", "validator",
-                 "debate", "merge", "social_simulation", "reporter"],
+        "full": [
+            "data_gatherer",
+            "feature_engineer",
+            "reflection",
+            "model_runner",
+            "validator",
+            "debate",
+            "merge",
+            "social_simulation",
+            "reporter",
+        ],
     }
 
     def __init__(self):
@@ -122,21 +140,34 @@ class JobRunner:
 
     def _run_job(self, job: Job):
         """Execute pipeline and emit events."""
+
         def emit(ev: JobEvent):
             job.events.put(ev)
 
         job.status = "running"
-        emit(JobEvent(type="log", message=f"Job {job.job_id} started — mode: {job.mode}, domain: {job.domain}"))
+        emit(
+            JobEvent(
+                type="log",
+                message=f"Job {job.job_id} started — mode: {job.mode}, domain: {job.domain}",
+            )
+        )
 
         try:
             cfg = get_config()
             pipeline = Pipeline()
-            
+
             # Prepend context_text to query if provided
             effective_query = job.query
             if job.context_text:
-                effective_query = f"CONTEXT:\n{job.context_text[:4000]}\n\nQUERY: {job.query}"
-                emit(JobEvent(type="log", message=f"Ingested context: {len(job.context_text)} chars"))
+                effective_query = (
+                    f"CONTEXT:\n{job.context_text[:4000]}\n\nQUERY: {job.query}"
+                )
+                emit(
+                    JobEvent(
+                        type="log",
+                        message=f"Ingested context: {len(job.context_text)} chars",
+                    )
+                )
 
             emit(JobEvent(type="log", message="Spawning agents..."))
 
@@ -149,7 +180,11 @@ class JobRunner:
             for node_name in expected_nodes:
                 if hasattr(pipeline, f"_{node_name}"):
                     originals[node_name] = getattr(pipeline, f"_{node_name}")
-                    setattr(pipeline, f"_{node_name}", self._wrap_node(pipeline, node_name, job, emit, total_nodes))
+                    setattr(
+                        pipeline,
+                        f"_{node_name}",
+                        self._wrap_node(pipeline, node_name, job, emit, total_nodes),
+                    )
 
             result = pipeline.run(
                 query=effective_query,
@@ -168,9 +203,21 @@ class JobRunner:
             job.completed_at = datetime.now().isoformat()
             job.progress_pct = 100
 
-            emit(JobEvent(type="progress", node="reporter", status="complete", duration=result.duration_s))
+            emit(
+                JobEvent(
+                    type="progress",
+                    node="reporter",
+                    status="complete",
+                    duration=result.duration_s,
+                )
+            )
             emit(JobEvent(type="result", result=self._result_to_dict(result)))
-            emit(JobEvent(type="log", message=f"Completed in {result.duration_s:.0f}s | Confidence: {result.confidence:.2f}"))
+            emit(
+                JobEvent(
+                    type="log",
+                    message=f"Completed in {result.duration_s:.0f}s | Confidence: {result.confidence:.2f}",
+                )
+            )
 
         except Exception as e:
             job.status = "failed"
@@ -183,7 +230,9 @@ class JobRunner:
         """Wrap a pipeline node method to emit progress events."""
         original = getattr(pipeline, f"_{node_name}")
         expected_nodes = self.MODE_NODES.get(job.mode, self.MODE_NODES["debate"])
-        node_index = expected_nodes.index(node_name) if node_name in expected_nodes else 0
+        node_index = (
+            expected_nodes.index(node_name) if node_name in expected_nodes else 0
+        )
 
         def wrapped(state: dict) -> dict:
             job.current_node = node_name
@@ -193,9 +242,16 @@ class JobRunner:
                 result = original(state)
                 duration = time.time() - t0
                 job.progress_pct = min(99, int((node_index + 1) / total_nodes * 100))
-                emit(JobEvent(type="progress", node=node_name, status="complete", duration=round(duration, 1)))
+                emit(
+                    JobEvent(
+                        type="progress",
+                        node=node_name,
+                        status="complete",
+                        duration=round(duration, 1),
+                    )
+                )
                 return result
-            except Exception as e:
+            except Exception:
                 emit(JobEvent(type="progress", node=node_name, status="failed"))
                 raise
 
@@ -255,15 +311,22 @@ class JobRunner:
 
     def _sse_data(self, data: dict) -> str:
         import json
+
         return json.dumps(data)
 
     def _run_job_langgraph(self, job: Job):
         """Execute pipeline via LangGraph with native streaming events."""
+
         def emit(ev: JobEvent):
             job.events.put(ev)
 
         job.status = "running"
-        emit(JobEvent(type="log", message=f"Job {job.job_id} started (LangGraph) — mode: {job.mode}"))
+        emit(
+            JobEvent(
+                type="log",
+                message=f"Job {job.job_id} started (LangGraph) — mode: {job.mode}",
+            )
+        )
 
         try:
             from smf_swarm.pipeline_langgraph import LangGraphPipeline
@@ -272,8 +335,15 @@ class JobRunner:
 
             effective_query = job.query
             if job.context_text:
-                effective_query = f"CONTEXT:\n{job.context_text[:4000]}\n\nQUERY: {job.query}"
-                emit(JobEvent(type="log", message=f"Ingested context: {len(job.context_text)} chars"))
+                effective_query = (
+                    f"CONTEXT:\n{job.context_text[:4000]}\n\nQUERY: {job.query}"
+                )
+                emit(
+                    JobEvent(
+                        type="log",
+                        message=f"Ingested context: {len(job.context_text)} chars",
+                    )
+                )
 
             def stream_callback(node_name: str, update: dict):
                 job.current_node = node_name
@@ -295,16 +365,30 @@ class JobRunner:
             job.completed_at = datetime.now().isoformat()
             job.progress_pct = 100
 
-            emit(JobEvent(type="progress", node="reporter", status="complete", duration=result.duration_s))
+            emit(
+                JobEvent(
+                    type="progress",
+                    node="reporter",
+                    status="complete",
+                    duration=result.duration_s,
+                )
+            )
             emit(JobEvent(type="result", result=self._result_to_dict(result)))
-            emit(JobEvent(type="log", message=f"Completed in {result.duration_s:.0f}s | Confidence: {result.confidence:.2f}"))
+            emit(
+                JobEvent(
+                    type="log",
+                    message=f"Completed in {result.duration_s:.0f}s | Confidence: {result.confidence:.2f}",
+                )
+            )
 
         except ImportError as exc:
             job.status = "failed"
             job.error = str(exc)
             job.completed_at = datetime.now().isoformat()
             emit(JobEvent(type="error", message=str(exc)))
-            emit(JobEvent(type="log", message=f"FAILED: LangGraph not installed: {exc}"))
+            emit(
+                JobEvent(type="log", message=f"FAILED: LangGraph not installed: {exc}")
+            )
         except Exception as e:
             job.status = "failed"
             job.error = str(e)

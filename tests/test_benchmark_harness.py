@@ -10,7 +10,6 @@ from __future__ import annotations
 import json
 import os
 import tempfile
-from pathlib import Path
 
 import pytest
 
@@ -22,9 +21,27 @@ def dummy_dataset():
     """Generate a temporary canonical JSONL dataset."""
     fd, path = tempfile.mkstemp(suffix=".jsonl")
     records = [
-        {"id": "q1", "question_text": "Will it rain tomorrow?", "domain": "climate", "outcome": 1, "source": "test"},
-        {"id": "q2", "question_text": "Will the stock market rise?", "domain": "finance", "outcome": 0, "source": "test"},
-        {"id": "q3", "question_text": "Will AI replace writers?", "domain": "technology", "outcome": 1, "source": "test"},
+        {
+            "id": "q1",
+            "question_text": "Will it rain tomorrow?",
+            "domain": "climate",
+            "outcome": 1,
+            "source": "test",
+        },
+        {
+            "id": "q2",
+            "question_text": "Will the stock market rise?",
+            "domain": "finance",
+            "outcome": 0,
+            "source": "test",
+        },
+        {
+            "id": "q3",
+            "question_text": "Will AI replace writers?",
+            "domain": "technology",
+            "outcome": 1,
+            "source": "test",
+        },
     ]
     with os.fdopen(fd, "w", encoding="utf-8") as f:
         for r in records:
@@ -71,7 +88,9 @@ class TestMetrics:
 
     def test_classification_scores(self):
         h = BenchmarkHarness()
-        acc, prec, rec, f1 = h._classification_scores([0.6, 0.4, 0.7, 0.3], [1, 0, 1, 0])
+        acc, prec, rec, f1 = h._classification_scores(
+            [0.6, 0.4, 0.7, 0.3], [1, 0, 1, 0]
+        )
         assert acc == 1.0
         assert prec == 1.0
         assert rec == 1.0
@@ -117,7 +136,18 @@ class TestReport:
             benchmark_run_id="test_001",
             dataset_name="dummy",
             total_questions=3,
-            metrics={"std_ms1": {"brier": 0.2, "ece": 0.1, "mce": 0.05, "accuracy": 0.75, "precision": 0.8, "recall": 0.7, "f1": 0.75, "avg_duration_s": 4.0}},
+            metrics={
+                "std_ms1": {
+                    "brier": 0.2,
+                    "ece": 0.1,
+                    "mce": 0.05,
+                    "accuracy": 0.75,
+                    "precision": 0.8,
+                    "recall": 0.7,
+                    "f1": 0.75,
+                    "avg_duration_s": 4.0,
+                }
+            },
             plots_dir=str(tmp_path / "plots"),
             duration_s=12.3,
         )
@@ -143,7 +173,7 @@ class TestCLIDispatch:
     """Verify CLI argument parser accepts benchmark options."""
 
     def test_cli_benchmark_parser(self):
-        from smf_swarm.cli import main
+
         # We can't call main() without side effects, but we can verify
         # the parser accepts our benchmark args by inspecting its internals
         import argparse

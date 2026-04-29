@@ -7,7 +7,6 @@ and edge cases (retry iteration, validation failure, social enabled).
 
 from __future__ import annotations
 
-import pytest
 import sys
 from pathlib import Path
 
@@ -25,8 +24,8 @@ from smf_swarm.pipeline_langgraph import (
     _router_after_merge,
 )
 
-
 # ── Helper factories ─────────────────────────────────────────
+
 
 def _base(mode: str, ok: bool = True, **kwargs) -> SwarmState:
     return {"ok": ok, "mode": mode, **kwargs}

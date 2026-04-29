@@ -11,16 +11,20 @@ router = APIRouter(prefix="/benchmark", tags=["benchmarks"])
 
 def get_auth():
     from smf_swarm.server.auth import AuthManager
+
     return AuthManager()
 
 
 def get_ratelimiter():
     from smf_swarm.server.auth import RateLimiter
+
     return RateLimiter()
 
 
 @router.post("", response_model=BenchmarkResponse, status_code=202)
-async def benchmark(req: BenchmarkRequest, auth=Depends(get_auth), rl=Depends(get_ratelimiter)):
+async def benchmark(
+    req: BenchmarkRequest, auth=Depends(get_auth), rl=Depends(get_ratelimiter)
+):
     runner = get_runner()
     batch_id = runner.submit_benchmark(
         dataset=req.dataset,

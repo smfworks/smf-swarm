@@ -16,6 +16,7 @@ from smf_swarm.platform_paths import default_cache_dir
 
 try:
     from diskcache import Cache
+
     _CACHE_AVAILABLE = True
 except ImportError:
     _CACHE_AVAILABLE = False
@@ -32,14 +33,19 @@ class LLMCache:
                 cache_dir = str(default_cache_dir())
             self._cache = Cache(cache_dir)
 
-    def _make_key(self, messages: list, model: str = "", temperature: float = 0.3, **kwargs) -> str:
+    def _make_key(
+        self, messages: list, model: str = "", temperature: float = 0.3, **kwargs
+    ) -> str:
         """Deterministic hash key for a prompt + config combination."""
-        content = json.dumps({
-            "messages": [m.content for m in messages],
-            "model": model,
-            "temperature": temperature,
-            "extra": kwargs,
-        }, sort_keys=True)
+        content = json.dumps(
+            {
+                "messages": [m.content for m in messages],
+                "model": model,
+                "temperature": temperature,
+                "extra": kwargs,
+            },
+            sort_keys=True,
+        )
         return hashlib.sha256(content.encode("utf-8")).hexdigest()[:32]
 
     def get(self, messages: list, **kwargs) -> Optional[AIMessage]:
@@ -49,7 +55,9 @@ class LLMCache:
         try:
             data = self._cache.get(key)
             if data:
-                return AIMessage(content=data["content"], response_metadata=data.get("metadata", {}))
+                return AIMessage(
+                    content=data["content"], response_metadata=data.get("metadata", {})
+                )
         except Exception:
             pass
         return None
@@ -59,10 +67,14 @@ class LLMCache:
             return
         key = self._make_key(messages, **kwargs)
         try:
-            self._cache.set(key, {
-                "content": response.content,
-                "metadata": response.response_metadata,
-            }, expire=86400 * 7)  # 7-day TTL
+            self._cache.set(
+                key,
+                {
+                    "content": response.content,
+                    "metadata": response.response_metadata,
+                },
+                expire=86400 * 7,
+            )  # 7-day TTL
         except Exception:
             pass
 

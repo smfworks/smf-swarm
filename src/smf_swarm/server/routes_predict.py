@@ -12,16 +12,20 @@ router = APIRouter(prefix="/predict", tags=["predictions"])
 
 def get_auth():
     from smf_swarm.server.auth import AuthManager
+
     return AuthManager()
 
 
 def get_ratelimiter():
     from smf_swarm.server.auth import RateLimiter
+
     return RateLimiter()
 
 
 @router.post("", response_model=PredictResponse, status_code=202)
-async def predict(req: PredictRequest, auth=Depends(get_auth), rl=Depends(get_ratelimiter)):
+async def predict(
+    req: PredictRequest, auth=Depends(get_auth), rl=Depends(get_ratelimiter)
+):
     runner = get_runner()
     job_id = runner.submit(
         query=req.query,

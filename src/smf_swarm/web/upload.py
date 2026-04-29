@@ -6,9 +6,6 @@ Extracts text from PDF and plain-text files for pipeline context ingestion.
 from __future__ import annotations
 
 import io
-from pathlib import Path
-from typing import Optional
-
 
 MAX_UPLOAD_CHARS = 50000  # ~50K chars max context
 
@@ -35,6 +32,7 @@ def _extract_pdf(content: bytes) -> str:
     """Extract text from PDF using PyPDF2 (graceful fallback)."""
     try:
         from PyPDF2 import PdfReader
+
         reader = PdfReader(io.BytesIO(content))
         text_parts = []
         for page in reader.pages:
@@ -52,7 +50,7 @@ def _extract_pdf(content: bytes) -> str:
 def ingest_file(content: bytes, filename: str) -> dict:
     """Ingest a file and return structured metadata."""
     text = extract_text(content, filename)
-    
+
     # Truncate if too long
     was_truncated = False
     original_len = len(text)

@@ -10,9 +10,7 @@ from __future__ import annotations
 
 import pytest
 import sys
-import time
-from unittest.mock import MagicMock, patch
-import sys
+from unittest.mock import MagicMock
 from pathlib import Path
 
 # Ensure smf_swarm is importable from repo root
@@ -25,7 +23,6 @@ from smf_swarm.pipeline_langgraph import (
     SwarmState,
     _make_node,
     _timing_tracker,
-    LANGGRAPH_AVAILABLE,
 )
 
 
@@ -45,7 +42,9 @@ def pipeline():
         return_value={"validation_passed": True, "validation_result": "PASS"}
     )
     p._debate = None
-    p._merge = MagicMock(return_value={"final_consensus": "MERGED", "final_confidence": 0.72})
+    p._merge = MagicMock(
+        return_value={"final_consensus": "MERGED", "final_confidence": 0.72}
+    )
     p._social = MagicMock(
         return_value={
             "social_report": "SOCIAL",

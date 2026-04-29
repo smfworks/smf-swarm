@@ -15,6 +15,7 @@ from .detector import HardwareProfile
 @dataclass(frozen=True)
 class SwarmProfile:
     """A named bundle of swarm operational parameters."""
+
     name: str
     display_name: str
     ram_target_gb: float
@@ -125,7 +126,12 @@ CLOUD = SwarmProfile(
 )
 
 ALL_PROFILES: list[SwarmProfile] = [
-    ESSENTIAL, COMPACT, BALANCED, DEEP, ENSEMBLE, CLOUD,
+    ESSENTIAL,
+    COMPACT,
+    BALANCED,
+    DEEP,
+    ENSEMBLE,
+    CLOUD,
 ]
 
 # Safety: never recommend a profile that uses more than this fraction of total RAM.

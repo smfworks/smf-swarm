@@ -4,30 +4,18 @@ DEPRECATED: This module was the original prototype. The production module is
 `pipeline_langgraph.py`. This file is kept for reference only.
 """
 
-import warnings
-warnings.warn(
-    "langgraph_study.py is deprecated. Use pipeline_langgraph for production.",
-    DeprecationWarning,
-    stacklevel=2,
-)
-
 from __future__ import annotations
 
 import time
-from dataclasses import dataclass, field
-from typing import Annotated, Optional, Any
-from datetime import datetime
-
-# Import existing Pipeline internals
+from typing_extensions import TypedDict
 from smf_swarm.pipeline import Pipeline, PipelineResult
-from smf_swarm.config import get_config, create_llm
 
 # ── LangGraph imports (optional; module gracefully degrades) ──
 try:
     from langgraph.graph import StateGraph, START, END
     from langgraph.checkpoint.memory import MemorySaver
     from langgraph.types import RetryPolicy
-    from langgraph.prebuilt import ToolNode
+
     LANGGRAPH_AVAILABLE = True
 except ImportError:
     StateGraph = START = END = None  # type: ignore
@@ -38,8 +26,6 @@ except ImportError:
 
 # ── Shared State Schema ────────────────────────────────────────
 
-from typing_extensions import TypedDict
-
 
 # Note: LangGraph state must be TypedDict or dataclass. We mirror PipelineResult
 # fields plus per-node mutable tracking.
@@ -49,6 +35,7 @@ class SwarmState(TypedDict, total=False):
     Every node receives the current SwarmState dict and must return a dict
     of key/value updates (LangGraph merges with the latest state).
     """
+
     # Input / config
     query: str
     domain: str
@@ -158,12 +145,14 @@ def _node_debate(pipeline: "Pipeline", state: SwarmState) -> dict:
     if not state.get("ok", True):
         return {}
     t0 = time.time()
-    deb_state = pipeline.debate.run({
-        "query": state["query"],
-        "domain": state["domain"],
-        "features": state.get("features", ""),
-        "data_quality": state.get("data_quality_score", 0.5),
-    })
+    deb_state = pipeline.debate.run(
+        {
+            "query": state["query"],
+            "domain": state["domain"],
+            "features": state.get("features", ""),
+            "data_quality": state.get("data_quality_score", 0.5),
+        }
+    )
     state["node_timings"]["debate"] = time.time() - t0
     return deb_state
 
@@ -264,11 +253,15 @@ def build_pipeline_graph(pipeline: "Pipeline") -> StateGraph | None:
     # ── Register nodes (partial = pre-bind Pipeline instance) ──
     builder.add_node("data_gatherer", lambda s: _node_data_gatherer(pipeline, s))
     builder.add_node("feature_engineer", lambda s: _node_feature_engineer(pipeline, s))
-    builder.add_node("statistical_baseline", lambda s: _node_statistical_baseline(pipeline, s))
+    builder.add_node(
+        "statistical_baseline", lambda s: _node_statistical_baseline(pipeline, s)
+    )
     builder.add_node("reflection", lambda s: _node_reflection(pipeline, s))
     builder.add_node("model_runner", lambda s: _node_model_runner(pipeline, s))
     builder.add_node("validator", lambda s: _node_validator(pipeline, s))
-    builder.add_node("retry_model", lambda s: _node_model_runner(pipeline, s))  # same logic, re-run
+    builder.add_node(
+        "retry_model", lambda s: _node_model_runner(pipeline, s)
+    )  # same logic, re-run
     builder.add_node("debate", lambda s: _node_debate(pipeline, s))
     builder.add_node("merge", lambda s: _node_merge(pipeline, s))
     builder.add_node("social", lambda s: _node_social(pipeline, s))
@@ -330,7 +323,6 @@ def build_pipeline_graph(pipeline: "Pipeline") -> StateGraph | None:
 
     # ── Compile with checkpointing ──
     checkpointer = MemorySaver()
-    retry_policy = RetryPolicy(max_attempts=2)
     graph = builder.compile(
         checkpointer=checkpointer,
         interrupt_after=["validator"],  # human-in-the-loop: approve before continuing
@@ -339,6 +331,7 @@ def build_pipeline_graph(pipeline: "Pipeline") -> StateGraph | None:
 
 
 # ─── LangGraphPipeline (public API, experimental) ───────────────
+
 
 class LangGraphPipeline:
     """Experimental replacement for Pipeline.run() using LangGraph.
@@ -370,11 +363,13 @@ class LangGraphPipeline:
         thread_id: str = "default",
     ) -> PipelineResult:
         """Run via compiled StateGraph with persistence and streaming."""
+        from datetime import datetime
+
         cfg = self._pipeline.cfg
         mode = (mode or cfg.default_mode).lower()
         domain = domain or cfg.default_domain
         if run_social is None:
-            run_social = (mode == "full")
+            run_social = mode == "full"
 
         t0 = time.time()
 
@@ -410,7 +405,9 @@ class LangGraphPipeline:
             for node_name, update in event.items():
                 if node_name == "__end__":
                     continue
-                print(f"[LangGraph] Node '{node_name}' complete → {list(update.keys())}")
+                print(
+                    f"[LangGraph] Node '{node_name}' complete → {list(update.keys())}"
+                )
 
         # Final state after graph terminates
         final_state = self._graph.get_state(config).values
@@ -424,10 +421,13 @@ class LangGraphPipeline:
             query=query,
             domain=domain,
             mode=mode,
-            confidence=round(final_state.get("final_confidence", final_state.get("confidence", 0.0)), 4),
+            confidence=round(
+                final_state.get("final_confidence", final_state.get("confidence", 0.0)),
+                4,
+            ),
             prediction_text=final_state.get("final_report", ""),
             summary=final_state.get("executive_summary", "")
-                or final_state.get("final_report", "")[:300],
+            or final_state.get("final_report", "")[:300],
             risk=final_state.get("risk_assessment", ""),
             data_quality=final_state.get("data_quality_score", 0.0),
             duration_s=round(t1 - t0, 1),
@@ -462,7 +462,7 @@ class LangGraphPipeline:
 ║  • Persistence: crashes resume mid-pipeline (MemorySaver/SQLite)   ║
 ║  • Streaming: native .stream() replaces manual SSE event dispatch  ║
 ║  • Retries: per-node RetryPolicy (e.g., validator gets 2 tries)   ║
-║  • Human-in-the-loop: interrupt_after validates for approval      ║
+║  • Human-in-the-loop: interrupt_after validates for approval     ║
 ║  • Parallel branches: debate openings as fan-out (already done)   ║
 ║  • Visualization: draw_mermaid() generates graph diagrams        ║
 ║  • Observability: LangSmith tracing compatible                     ║

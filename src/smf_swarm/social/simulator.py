@@ -14,10 +14,11 @@ Usage:
 
 from __future__ import annotations
 
-import os, re, random, uuid
-from dataclasses import dataclass, field, asdict
+import re
+import random
+import uuid
+from dataclasses import dataclass
 from typing import Optional
-from datetime import datetime
 from langchain_core.messages import HumanMessage
 
 
@@ -27,16 +28,18 @@ class Persona:
     name: str
     role: str
     organization: str
-    stance: str          # optimist | skeptic | neutral
-    influence: float     # 0–3
-    activity: float      # 0–1
+    stance: str  # optimist | skeptic | neutral
+    influence: float  # 0–3
+    activity: float  # 0–1
     expertise: str
     background: str = ""
 
     def to_prompt(self) -> str:
-        return (f"{self.name} ({self.role} at {self.organization}) — "
-                f"stance: {self.stance}, influence: {self.influence:.1f}, "
-                f"expertise: {self.expertise}")
+        return (
+            f"{self.name} ({self.role} at {self.organization}) — "
+            f"stance: {self.stance}, influence: {self.influence:.1f}, "
+            f"expertise: {self.expertise}"
+        )
 
 
 @dataclass
@@ -44,7 +47,7 @@ class SocialAction:
     round: int
     persona_id: str
     persona_name: str
-    action_type: str   # post | react | endorse | challenge
+    action_type: str  # post | react | endorse | challenge
     content: str
     target_id: str = ""
     sentiment: float = 0.0
@@ -52,18 +55,29 @@ class SocialAction:
 
 class InMemoryGraph:
     """Lightweight knowledge graph for simulation."""
+
     def __init__(self):
         self.nodes: list[dict] = []
         self.edges: list[dict] = []
+
     def add_node(self, label: str, props: dict) -> str:
         nid = str(uuid.uuid4())[:8]
         self.nodes.append({"id": nid, "label": label, **props})
         return nid
+
     def add_edge(self, source: str, target: str, relation: str, props: dict = None):
-        self.edges.append({"source": source, "target": target, "relation": relation, "props": props or {}})
+        self.edges.append(
+            {
+                "source": source,
+                "target": target,
+                "relation": relation,
+                "props": props or {},
+            }
+        )
+
     def extract_knowledge(self, text: str):
         # Simple keyword extraction for demo; production: use NER/LLM extraction
-        entities = re.findall(r'([A-Z][a-zA-Z ]{3,30})', text)
+        entities = re.findall(r"([A-Z][a-zA-Z ]{3,30})", text)
         for ent in set(entities):
             if len(ent.strip()) > 4:
                 self.add_node("Entity", {"name": ent.strip()})
@@ -73,7 +87,13 @@ class SocialSimulator:
     def __init__(self, llm):
         self.llm = llm
 
-    def run(self, query: str, domain: str = "general", agent_count: int = 15, rounds: int = 4) -> dict:
+    def run(
+        self,
+        query: str,
+        domain: str = "general",
+        agent_count: int = 15,
+        rounds: int = 4,
+    ) -> dict:
         print(f"  [SocialSim] Spawning {agent_count} agents × {rounds} rounds...")
         personas = self._generate_personas(domain, agent_count)
         simulator = _Simulator(query, domain, personas, rounds, self.llm)
@@ -84,52 +104,204 @@ class SocialSimulator:
         personas = []
         for i in range(count):
             t = templates[i % len(templates)]
-            personas.append(Persona(
-                id=f"agent_{i}",
-                name=t[0],
-                role=t[1],
-                organization=t[2],
-                stance=t[3],
-                influence=t[4],
-                activity=t[5],
-                expertise=t[6],
-            ))
+            personas.append(
+                Persona(
+                    id=f"agent_{i}",
+                    name=t[0],
+                    role=t[1],
+                    organization=t[2],
+                    stance=t[3],
+                    influence=t[4],
+                    activity=t[5],
+                    expertise=t[6],
+                )
+            )
         return personas
 
     def _get_templates(self, domain: str) -> list[tuple]:
         return {
             "technology": [
-                ("Alex Mercer", "VC", "Andreessen Horowitz", "optimist", 2.5, 0.7, "AI startups, enterprise adoption"),
-                ("Sarah Chen", "PM", "BlackRock", "neutral", 2.0, 0.6, "tech valuations, ETF flows"),
-                ("Dr. Yuki Tanaka", "Researcher", "MIT AI Lab", "skeptic", 2.8, 0.5, "AI safety, model reliability"),
-                ("James Wright", "Analyst", "Goldman Sachs", "skeptic", 2.2, 0.7, "risk management, financial AI"),
-                ("Priya Patel", "Regulator", "SEC", "skeptic", 3.0, 0.4, "AI compliance, market manipulation"),
-                ("Mike Torres", "Founder", "NeuralDash", "optimist", 1.5, 0.9, "AI agents, automation"),
+                (
+                    "Alex Mercer",
+                    "VC",
+                    "Andreessen Horowitz",
+                    "optimist",
+                    2.5,
+                    0.7,
+                    "AI startups, enterprise adoption",
+                ),
+                (
+                    "Sarah Chen",
+                    "PM",
+                    "BlackRock",
+                    "neutral",
+                    2.0,
+                    0.6,
+                    "tech valuations, ETF flows",
+                ),
+                (
+                    "Dr. Yuki Tanaka",
+                    "Researcher",
+                    "MIT AI Lab",
+                    "skeptic",
+                    2.8,
+                    0.5,
+                    "AI safety, model reliability",
+                ),
+                (
+                    "James Wright",
+                    "Analyst",
+                    "Goldman Sachs",
+                    "skeptic",
+                    2.2,
+                    0.7,
+                    "risk management, financial AI",
+                ),
+                (
+                    "Priya Patel",
+                    "Regulator",
+                    "SEC",
+                    "skeptic",
+                    3.0,
+                    0.4,
+                    "AI compliance, market manipulation",
+                ),
+                (
+                    "Mike Torres",
+                    "Founder",
+                    "NeuralDash",
+                    "optimist",
+                    1.5,
+                    0.9,
+                    "AI agents, automation",
+                ),
             ],
             "political": [
-                ("Elena Rossi", "Pollster", "FiveThirtyEight", "neutral", 2.5, 0.6, "electoral modeling, polling accuracy"),
-                ("Tom Harris", "Strategist", "GOP Analytics", "skeptic", 2.3, 0.7, "swing-state demographics, turnout"),
-                ("Amara Johnson", "Activist", "MoveOn", "optimist", 2.0, 0.6, "grassroots mobilization, voter registration"),
-                ("Dr. Klaus Weber", "Political Scientist", "Humboldt University", "skeptic", 2.8, 0.5, "comparative politics, ideology"),
+                (
+                    "Elena Rossi",
+                    "Pollster",
+                    "FiveThirtyEight",
+                    "neutral",
+                    2.5,
+                    0.6,
+                    "electoral modeling, polling accuracy",
+                ),
+                (
+                    "Tom Harris",
+                    "Strategist",
+                    "GOP Analytics",
+                    "skeptic",
+                    2.3,
+                    0.7,
+                    "swing-state demographics, turnout",
+                ),
+                (
+                    "Amara Johnson",
+                    "Activist",
+                    "MoveOn",
+                    "optimist",
+                    2.0,
+                    0.6,
+                    "grassroots mobilization, voter registration",
+                ),
+                (
+                    "Dr. Klaus Weber",
+                    "Political Scientist",
+                    "Humboldt University",
+                    "skeptic",
+                    2.8,
+                    0.5,
+                    "comparative politics, ideology",
+                ),
             ],
             "financial": [
-                ("Sarah Chen", "CFO", "TechVenture Capital", "optimist", 2.5, 0.7, "venture capital, tech valuation"),
-                ("James Wright", "Risk Analyst", "Goldman Sachs", "skeptic", 2.0, 0.8, "risk management, derivatives"),
-                ("Dr. Priya Patel", "Economic Researcher", "Brookings Institute", "neutral", 2.8, 0.5, "macroeconomics, policy"),
-                ("Mike Torres", "Portfolio Manager", "BlackRock", "optimist", 2.2, 0.6, "asset management, ETFs"),
-                ("Linda Zhang", "Regulator", "SEC", "skeptic", 3.0, 0.4, "securities regulation, compliance"),
+                (
+                    "Sarah Chen",
+                    "CFO",
+                    "TechVenture Capital",
+                    "optimist",
+                    2.5,
+                    0.7,
+                    "venture capital, tech valuation",
+                ),
+                (
+                    "James Wright",
+                    "Risk Analyst",
+                    "Goldman Sachs",
+                    "skeptic",
+                    2.0,
+                    0.8,
+                    "risk management, derivatives",
+                ),
+                (
+                    "Dr. Priya Patel",
+                    "Economic Researcher",
+                    "Brookings Institute",
+                    "neutral",
+                    2.8,
+                    0.5,
+                    "macroeconomics, policy",
+                ),
+                (
+                    "Mike Torres",
+                    "Portfolio Manager",
+                    "BlackRock",
+                    "optimist",
+                    2.2,
+                    0.6,
+                    "asset management, ETFs",
+                ),
+                (
+                    "Linda Zhang",
+                    "Regulator",
+                    "SEC",
+                    "skeptic",
+                    3.0,
+                    0.4,
+                    "securities regulation, compliance",
+                ),
             ],
-        }.get(domain, [
-            ("Alice Generic", "Analyst", "SMF Works", "neutral", 2.0, 0.6, "general analysis"),
-            ("Bob Pessimist", "Risk Manager", "SMF Works", "skeptic", 2.0, 0.6, "risk assessment"),
-            ("Carla Optimist", "Strategist", "SMF Works", "optimist", 2.0, 0.6, "strategic planning"),
-        ])
+        }.get(
+            domain,
+            [
+                (
+                    "Alice Generic",
+                    "Analyst",
+                    "SMF Works",
+                    "neutral",
+                    2.0,
+                    0.6,
+                    "general analysis",
+                ),
+                (
+                    "Bob Pessimist",
+                    "Risk Manager",
+                    "SMF Works",
+                    "skeptic",
+                    2.0,
+                    0.6,
+                    "risk assessment",
+                ),
+                (
+                    "Carla Optimist",
+                    "Strategist",
+                    "SMF Works",
+                    "optimist",
+                    2.0,
+                    0.6,
+                    "strategic planning",
+                ),
+            ],
+        )
 
 
 # ─── Internal simulator ─────────────────────────
 
+
 class _Simulator:
-    def __init__(self, query: str, domain: str, personas: list[Persona], rounds: int, llm):
+    def __init__(
+        self, query: str, domain: str, personas: list[Persona], rounds: int, llm
+    ):
         self.query = query
         self.domain = domain
         self.personas = personas
@@ -153,7 +325,9 @@ class _Simulator:
     def _seed_graph(self):
         self.graph.add_node("Query", {"text": self.query, "domain": self.domain})
         for p in self.personas:
-            self.graph.add_node("Persona", {"name": p.name, "role": p.role, "stance": p.stance})
+            self.graph.add_node(
+                "Persona", {"name": p.name, "role": p.role, "stance": p.stance}
+            )
 
     def _run_round(self, round_num: int) -> list[SocialAction]:
         actions = []
@@ -176,7 +350,9 @@ class _Simulator:
             lines.append(f"  {a.persona_name}: {a.content[:150]}")
         return "\n".join(lines)
 
-    def _generate_action(self, persona: Persona, round_num: int, context: str) -> Optional[SocialAction]:
+    def _generate_action(
+        self, persona: Persona, round_num: int, context: str
+    ) -> Optional[SocialAction]:
         action_types = ["post", "react", "endorse", "challenge"]
         weights = {
             "optimist": [0.4, 0.2, 0.3, 0.1],
@@ -213,8 +389,26 @@ class _Simulator:
 
     def _estimate_sentiment(self, text: str, stance: str) -> float:
         text = text.lower()
-        bullish = ["likely", "yes", "growth", "surge", "exceed", "accelerate", "bullish", "optimistic"]
-        bearish = ["unlikely", "no", "decline", "fall", "below", "risk", "bearish", "pessimistic"]
+        bullish = [
+            "likely",
+            "yes",
+            "growth",
+            "surge",
+            "exceed",
+            "accelerate",
+            "bullish",
+            "optimistic",
+        ]
+        bearish = [
+            "unlikely",
+            "no",
+            "decline",
+            "fall",
+            "below",
+            "risk",
+            "bearish",
+            "pessimistic",
+        ]
         b = sum(1 for w in bullish if w in text)
         c = sum(1 for w in bearish if w in text)
         if stance == "optimist":

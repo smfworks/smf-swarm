@@ -85,7 +85,9 @@ class ServerJobRunner:
                 confidences = [j.result.confidence for j in batch.jobs if j.result]
                 if confidences:
                     batch.metrics = {
-                        "mean_confidence": round(sum(confidences) / len(confidences), 4),
+                        "mean_confidence": round(
+                            sum(confidences) / len(confidences), 4
+                        ),
                         "min_confidence": round(min(confidences), 4),
                         "max_confidence": round(max(confidences), 4),
                     }
@@ -96,7 +98,9 @@ class ServerJobRunner:
         with self._batch_lock:
             return self._batches.get(batch_id)
 
-    def submit_benchmark(self, dataset, modes, multi_samples, output_dir, llm_model) -> str:
+    def submit_benchmark(
+        self, dataset, modes, multi_samples, output_dir, llm_model
+    ) -> str:
         batch_id = f"bench-{uuid.uuid4().hex[:12]}"
         batch = Batch(batch_id=batch_id, status="running", total_jobs=0)
         with self._batch_lock:
@@ -109,13 +113,16 @@ class ServerJobRunner:
         t.start()
         return batch_id
 
-    def _run_benchmark(self, batch_id, dataset, modes, multi_samples, output_dir, llm_model):
+    def _run_benchmark(
+        self, batch_id, dataset, modes, multi_samples, output_dir, llm_model
+    ):
         batch = self._batches.get(batch_id)
         if batch is None:
             return
         start = time.time()
         try:
             from smf_swarm.benchmarks.harness import BenchmarkHarness
+
             harness = BenchmarkHarness()
             report = harness.run(
                 dataset=dataset,

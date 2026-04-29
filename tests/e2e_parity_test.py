@@ -7,6 +7,7 @@ Run:
 
 Returns 0 if parity is within tolerance, 1 if critical mismatch, 2 on crash.
 """
+
 import sys
 import os
 import re
@@ -19,6 +20,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 from smf_swarm.pipeline import Pipeline, PipelineResult
 
 # ── Mock LLM backend ─────────────────────────────────────────
+
 
 class FakeLLM:
     """Deterministic mock ChatOpenAI. Returns canned responses based on prompt keywords."""
@@ -40,7 +42,11 @@ class FakeLLM:
 
     def _pick_response(self, text: str) -> str:
         lower = text.lower()
-        if "data sources" in lower or "data_gatherer" in lower or "gather data" in lower:
+        if (
+            "data sources" in lower
+            or "data_gatherer" in lower
+            or "gather data" in lower
+        ):
             return (
                 "Key sources: industry reports, peer-reviewed studies, news.\n"
                 "Historical precedents: similar shifts took 18-24 months.\n"
@@ -98,12 +104,16 @@ class FakeLLM:
 
 # ── Helpers ──────────────────────────────────────────────────
 
+
 def result_to_dict(r: PipelineResult) -> dict:
     d = asdict(r)
     # Scrub volatile fields
     d.pop("timestamp", None)
-    d["metadata"] = {k: v for k, v in d.get("metadata", {}).items()
-                     if k not in ("node_timings", "start_time")}
+    d["metadata"] = {
+        k: v
+        for k, v in d.get("metadata", {}).items()
+        if k not in ("node_timings", "start_time")
+    }
     return d
 
 
@@ -132,25 +142,35 @@ def diff_results(a: PipelineResult, b: PipelineResult, tol: float = 0.05) -> lis
 
 # ── Main ─────────────────────────────────────────────────────
 
-def run_comparison(query: str, mode: str, domain: str) -> tuple[PipelineResult, PipelineResult]:
+
+def run_comparison(
+    query: str, mode: str, domain: str
+) -> tuple[PipelineResult, PipelineResult]:
     """Run once in classic mode, once in LangGraph mode."""
 
     # Classic
     print(f"\n[CLASSIC]  mode={mode}  query='{query}'")
     classic_pipe = Pipeline(llm=FakeLLM())
     classic = classic_pipe.run(query=query, mode=mode, domain=domain, langgraph=False)
-    print(f"  confidence={classic.confidence:.3f}  duration={classic.duration_s:.1f}s  status={classic.status}")
+    print(
+        f"  confidence={classic.confidence:.3f}  duration={classic.duration_s:.1f}s  status={classic.status}"
+    )
 
     # LangGraph
     print(f"[LANGGRAPH] mode={mode}  query='{query}'")
     lg_pipe = Pipeline(llm=FakeLLM())
     lg = lg_pipe.run(query=query, mode=mode, domain=domain, langgraph=True)
-    print(f"  confidence={lg.confidence:.3f}  duration={lg.duration_s:.1f}s  status={lg.status}")
+    print(
+        f"  confidence={lg.confidence:.3f}  duration={lg.duration_s:.1f}s  status={lg.status}"
+    )
 
     # Inspect metadata flags
     lg_meta = lg.metadata or {}
     classic_meta = classic.metadata or {}
-    print(f"  lg.backend={lg_meta.get('langgraph')}  cl.backend={classic_meta.get('langgraph')} (expected False)")
+    print(
+        f"  lg.backend={lg_meta.get('langgraph')}  cl.backend={classic_meta.get('langgraph')} (expected False)"
+    )
+
 
 def main() -> int:
     os.environ.setdefault("LANGGRAPH_AUTO", "1")
@@ -169,6 +189,7 @@ def main() -> int:
         except Exception as exc:
             print(f"  [ERROR] mode={mode}: {exc}")
             import traceback
+
             traceback.print_exc()
             return 2
 
@@ -178,8 +199,12 @@ def main() -> int:
 
     # Final detailed comparison for full mode
     print("\n[DETAILED COMPARISON] mode=full")
-    classic_full = Pipeline(llm=FakeLLM()).run(query=query, mode="full", domain=domain, langgraph=False)
-    lg_full = Pipeline(llm=FakeLLM()).run(query=query, mode="full", domain=domain, langgraph=True)
+    classic_full = Pipeline(llm=FakeLLM()).run(
+        query=query, mode="full", domain=domain, langgraph=False
+    )
+    lg_full = Pipeline(llm=FakeLLM()).run(
+        query=query, mode="full", domain=domain, langgraph=True
+    )
 
     issues = diff_results(classic_full, lg_full, tol=0.10)
     if issues:

@@ -35,7 +35,9 @@ from typing import Optional
 try:
     import numpy as np
 except ImportError:  # pragma: no cover
-    raise ImportError("numpy is required for conformal prediction — install with: pip install numpy")
+    raise ImportError(
+        "numpy is required for conformal prediction — install with: pip install numpy"
+    )
 
 
 # ── Optional MAPIE soft dependency ─────────────────────────
@@ -48,12 +50,14 @@ _MAPIE_REGRESSOR: type | None = None
 try:
     from mapie.classification import MapieClassifier as _MAPIE_CLASSIFIER  # type: ignore[assignment]
     from mapie.regression import MapieRegressor as _MAPIE_REGRESSOR  # type: ignore[assignment]
+
     _MAPIE_AVAILABLE = True
 except ImportError:
     pass
 try:
     from mapie.classification import SplitConformalClassifier as _MAPIE_CLASSIFIER  # type: ignore[assignment]
     from mapie.regression import SplitConformalRegressor as _MAPIE_REGRESSOR  # type: ignore[assignment]
+
     _MAPIE_AVAILABLE = True
 except ImportError:
     pass
@@ -67,9 +71,9 @@ MapieRegressor = _MAPIE_REGRESSOR  # type: ignore[misc,assignment]
 class ConformalInterval:
     """Calibrated confidence interval for a binary prediction."""
 
-    low: float          # lower bound on P(outcome=1)
-    high: float         # upper bound on P(outcome=1)
-    margin: float       # q̂ — the conformal threshold
+    low: float  # lower bound on P(outcome=1)
+    high: float  # upper bound on P(outcome=1)
+    margin: float  # q̂ — the conformal threshold
     coverage_target: float  # 1 − α
     prediction_set: frozenset[int]  # {0}, {1}, or {0,1}
 
@@ -123,7 +127,9 @@ class ConformalPredictor:
 
     # ── Core API ─────────────────────────────────────────────
 
-    def fit(self, confidences: list[float], outcomes: list[int]) -> "ConformalPredictor":
+    def fit(
+        self, confidences: list[float], outcomes: list[int]
+    ) -> "ConformalPredictor":
         """Fit on a calibration set.
 
         Args:
@@ -138,10 +144,7 @@ class ConformalPredictor:
             return self
 
         # Non-conformity: s_i = 1 − p̂_yi
-        scores = [
-            1.0 - c if y == 1 else c
-            for c, y in zip(confidences, outcomes)
-        ]
+        scores = [1.0 - c if y == 1 else c for c, y in zip(confidences, outcomes)]
         self.calibration_scores = scores
         self.n_cal = len(scores)
 
@@ -188,9 +191,7 @@ class ConformalPredictor:
 
     # ── Validation ───────────────────────────────────────────
 
-    def coverage_score(
-        self, confidences: list[float], outcomes: list[int]
-    ) -> dict:
+    def coverage_score(self, confidences: list[float], outcomes: list[int]) -> dict:
         """Evaluate empirical marginal coverage on a held-out test set."""
         if len(confidences) != len(outcomes):
             raise ValueError("Length mismatch")

@@ -26,21 +26,23 @@ import warnings
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
 
 import numpy as np
 
 try:
     from sklearn.feature_extraction.text import TfidfVectorizer
     from sklearn.linear_model import LogisticRegression
+
     _SKLEARN = True
 except ImportError:
     _SKLEARN = False
 
 try:
     import matplotlib
+
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
+
     _MATPLOTLIB = True
 except ImportError:
     _MATPLOTLIB = False
@@ -92,10 +94,16 @@ class BenchmarkReport:
             f.write(f"**Questions:** {self.total_questions}\n\n")
             f.write(f"**Duration:** {self.duration_s:.1f}s\n\n")
             if self.conformal_alpha is not None:
-                f.write(f"**Conformal α:** {self.conformal_alpha} | **Split:** {self.conformal_cal_ratio:.0%} cal / {1-self.conformal_cal_ratio:.0%} test\n\n")
+                f.write(
+                    f"**Conformal α:** {self.conformal_alpha} | **Split:** {self.conformal_cal_ratio:.0%} cal / {1-self.conformal_cal_ratio:.0%} test\n\n"
+                )
             f.write("## Metrics\n\n")
-            f.write("| Mode | Brier ↓ | ECE ↓ | MCE ↓ | Accuracy ↑ | Precision ↑ | Recall ↑ | F1 ↑ | Avg Dur(s) | CP Coverage | CP Width |\n")
-            f.write("|------|---------|-------|-------|------------|-------------|----------|------|-----------|-------------|----------|\n")
+            f.write(
+                "| Mode | Brier ↓ | ECE ↓ | MCE ↓ | Accuracy ↑ | Precision ↑ | Recall ↑ | F1 ↑ | Avg Dur(s) | CP Coverage | CP Width |\n"
+            )
+            f.write(
+                "|------|---------|-------|-------|------------|-------------|----------|------|-----------|-------------|----------|\n"
+            )
             for mode, m in sorted(self.metrics.items()):
                 brier = m.get("brier")
                 ece = m.get("ece")
@@ -125,7 +133,7 @@ class BenchmarkReport:
             if self.plots_dir:
                 f.write(f"\n## Plots\n\nReliability diagrams: `{self.plots_dir}`\n")
             if self.conformal_alpha is not None:
-                f.write(f"\n## Conformal Prediction\n\n")
+                f.write("\n## Conformal Prediction\n\n")
                 f.write(f"- **α (miscoverage):** {self.conformal_alpha}\n")
                 f.write(f"- **Calibration split:** {self.conformal_cal_ratio:.0%}\n")
                 # Find any mode with conformal metrics to print q̂
@@ -163,7 +171,9 @@ class BenchmarkHarness:
             return 0.0
         return sum((c - o) ** 2 for c, o in zip(confidences, outcomes)) / n
 
-    def _ece(self, confidences: list[float], outcomes: list[int], n_bins: int = 10) -> float:
+    def _ece(
+        self, confidences: list[float], outcomes: list[int], n_bins: int = 10
+    ) -> float:
         """Expected Calibration Error with equal-width bins."""
         n = len(confidences)
         if n == 0:
@@ -172,7 +182,11 @@ class BenchmarkHarness:
         ece = 0.0
         for b in range(n_bins):
             lo, hi = bins[b], bins[b + 1]
-            idx = [i for i, c in enumerate(confidences) if lo <= c < hi or (c == 1.0 and hi == 1.0)]
+            idx = [
+                i
+                for i, c in enumerate(confidences)
+                if lo <= c < hi or (c == 1.0 and hi == 1.0)
+            ]
             if not idx:
                 continue
             acc = sum(outcomes[i] for i in idx) / len(idx)
@@ -180,7 +194,9 @@ class BenchmarkHarness:
             ece += len(idx) / n * abs(acc - avg_conf)
         return ece
 
-    def _mce(self, confidences: list[float], outcomes: list[int], n_bins: int = 10) -> float:
+    def _mce(
+        self, confidences: list[float], outcomes: list[int], n_bins: int = 10
+    ) -> float:
         """Max Calibration Error."""
         n = len(confidences)
         if n == 0:
@@ -189,7 +205,11 @@ class BenchmarkHarness:
         max_err = 0.0
         for b in range(n_bins):
             lo, hi = bins[b], bins[b + 1]
-            idx = [i for i, c in enumerate(confidences) if lo <= c < hi or (c == 1.0 and hi == 1.0)]
+            idx = [
+                i
+                for i, c in enumerate(confidences)
+                if lo <= c < hi or (c == 1.0 and hi == 1.0)
+            ]
             if not idx:
                 continue
             acc = sum(outcomes[i] for i in idx) / len(idx)
@@ -197,7 +217,9 @@ class BenchmarkHarness:
             max_err = max(max_err, abs(acc - avg_conf))
         return max_err
 
-    def _classification_scores(self, confidences: list[float], outcomes: list[int], threshold: float = 0.5):
+    def _classification_scores(
+        self, confidences: list[float], outcomes: list[int], threshold: float = 0.5
+    ):
         predictions = [1 if c >= threshold else 0 for c in confidences]
         tp = sum(1 for p, o in zip(predictions, outcomes) if p == 1 and o == 1)
         fp = sum(1 for p, o in zip(predictions, outcomes) if p == 1 and o == 0)
@@ -207,7 +229,11 @@ class BenchmarkHarness:
         accuracy = (tp + tn) / len(outcomes) if outcomes else 0.0
         precision = tp / (tp + fp) if (tp + fp) > 0 else 0.0
         recall = tp / (tp + fn) if (tp + fn) > 0 else 0.0
-        f1 = 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0.0
+        f1 = (
+            2 * precision * recall / (precision + recall)
+            if (precision + recall) > 0
+            else 0.0
+        )
         return accuracy, precision, recall, f1
 
     def _reliability_plot(self, confidences, outcomes, n_bins, out_path):
@@ -219,7 +245,11 @@ class BenchmarkHarness:
         bin_counts = []
         for b in range(n_bins):
             lo, hi = bins[b], bins[b + 1]
-            idx = [i for i, c in enumerate(confidences) if lo <= c < hi or (c == 1.0 and hi == 1.0)]
+            idx = [
+                i
+                for i, c in enumerate(confidences)
+                if lo <= c < hi or (c == 1.0 and hi == 1.0)
+            ]
             if not idx:
                 continue
             bin_centers.append((lo + hi) / 2)
@@ -229,7 +259,9 @@ class BenchmarkHarness:
         fig, ax = plt.subplots(figsize=(6, 5))
         ax.plot([0, 1], [0, 1], "k--", label="Perfect calibration")
         if bin_centers:
-            ax.bar(bin_centers, bin_accuracies, width=0.08, alpha=0.6, edgecolor="black")
+            ax.bar(
+                bin_centers, bin_accuracies, width=0.08, alpha=0.6, edgecolor="black"
+            )
         ax.set_xlabel("Mean predicted confidence")
         ax.set_ylabel("Fraction of positives")
         ax.set_title("Reliability Diagram")
@@ -342,7 +374,9 @@ class BenchmarkHarness:
 
         # 2. Base rate
         rate, _ = self._base_rate_baseline(outcomes)
-        run_metrics["baseline_base_rate"] = {"brier": self._brier([rate] * len(outcomes), outcomes)}
+        run_metrics["baseline_base_rate"] = {
+            "brier": self._brier([rate] * len(outcomes), outcomes)
+        }
 
         # 3. LogReg TF-IDF
         brier_lr, lr_confs = self._logreg_baseline(texts, outcomes)
@@ -357,17 +391,22 @@ class BenchmarkHarness:
             for i, rec in enumerate(cal_records, 1):
                 if i % 10 == 0 or cal_n <= 20:
                     print(f"  [cal] [{i}/{cal_n}]")
-                domain = domain_map.get(rec.get("source", ""), rec.get("domain", "general"))
+                domain = domain_map.get(
+                    rec.get("source", ""), rec.get("domain", "general")
+                )
                 try:
                     result = self.pipeline.run(
-                        query=rec["question_text"], mode="standard",
-                        domain=domain, multi_sample=1,
+                        query=rec["question_text"],
+                        mode="standard",
+                        domain=domain,
+                        multi_sample=1,
                     )
                     cal_confidences.append(result.confidence)
                 except Exception as e:
                     warnings.warn(f"Calibration run {i} failed: {e}")
                     cal_confidences.append(0.5)
             from smf_swarm.conformal import ConformalPredictor
+
             conformal_predictor = ConformalPredictor(alpha=conformal_alpha)
             cal_outcomes = [int(r["outcome"]) for r in cal_records]
             conformal_predictor.fit(cal_confidences, cal_outcomes)
@@ -386,12 +425,18 @@ class BenchmarkHarness:
                 social_mods = []
                 conformal_intervals = []
 
-                active_records = test_records if conformal_alpha is not None else records
+                active_records = (
+                    test_records if conformal_alpha is not None else records
+                )
                 for i, rec in enumerate(active_records, 1):
                     if i % 10 == 0 or i == 1:
-                        print(f"  [{i}/{len(active_records)}] {rec['question_text'][:60]}...")
+                        print(
+                            f"  [{i}/{len(active_records)}] {rec['question_text'][:60]}..."
+                        )
 
-                    domain = domain_map.get(rec.get("source", ""), rec.get("domain", "general"))
+                    domain = domain_map.get(
+                        rec.get("source", ""), rec.get("domain", "general")
+                    )
                     try:
                         result = self.pipeline.run(
                             query=rec["question_text"],
@@ -419,10 +464,26 @@ class BenchmarkHarness:
                             prediction=pred_summary,
                             confidence=conf,
                             llm_model=self.llm_model,
-                            duration_s=result.duration_s if hasattr(result, "duration_s") else 0.0,
-                            data_quality=result.data_quality if hasattr(result, "data_quality") else 0.5,
-                            health_score=result.health_score if hasattr(result, "health_score") else 0.0,
-                            social_modifier=result.social_modifier if hasattr(result, "social_modifier") else None,
+                            duration_s=(
+                                result.duration_s
+                                if hasattr(result, "duration_s")
+                                else 0.0
+                            ),
+                            data_quality=(
+                                result.data_quality
+                                if hasattr(result, "data_quality")
+                                else 0.5
+                            ),
+                            health_score=(
+                                result.health_score
+                                if hasattr(result, "health_score")
+                                else 0.0
+                            ),
+                            social_modifier=(
+                                result.social_modifier
+                                if hasattr(result, "social_modifier")
+                                else None
+                            ),
                         )
                     except Exception as e:
                         warnings.warn(f"Backtest record failed: {e}")
@@ -434,7 +495,10 @@ class BenchmarkHarness:
                         health_scores.append(result.health_score)
                     if hasattr(result, "data_quality"):
                         data_qualities.append(result.data_quality)
-                    if hasattr(result, "social_modifier") and result.social_modifier is not None:
+                    if (
+                        hasattr(result, "social_modifier")
+                        and result.social_modifier is not None
+                    ):
                         social_mods.append(result.social_modifier)
 
                 # Evaluate
@@ -442,7 +506,9 @@ class BenchmarkHarness:
                 brier = self._brier(confidences, eval_outcomes)
                 ece = self._ece(confidences, eval_outcomes)
                 mce = self._mce(confidences, eval_outcomes)
-                acc, prec, rec, f1 = self._classification_scores(confidences, eval_outcomes)
+                acc, prec, rec, f1 = self._classification_scores(
+                    confidences, eval_outcomes
+                )
 
                 run_metrics[label] = {
                     "brier": round(brier, 4),
@@ -452,38 +518,56 @@ class BenchmarkHarness:
                     "precision": round(prec, 4),
                     "recall": round(rec, 4),
                     "f1": round(f1, 4),
-                    "avg_duration_s": round(sum(durations) / len(durations), 1) if durations else 0.0,
-                    "avg_health_score": round(sum(health_scores) / len(health_scores), 3) if health_scores else 0.0,
-                    "avg_data_quality": round(sum(data_qualities) / len(data_qualities), 3) if data_qualities else 0.0,
+                    "avg_duration_s": (
+                        round(sum(durations) / len(durations), 1) if durations else 0.0
+                    ),
+                    "avg_health_score": (
+                        round(sum(health_scores) / len(health_scores), 3)
+                        if health_scores
+                        else 0.0
+                    ),
+                    "avg_data_quality": (
+                        round(sum(data_qualities) / len(data_qualities), 3)
+                        if data_qualities
+                        else 0.0
+                    ),
                 }
 
                 # Conformal metrics
                 if conformal_predictor and conformal_intervals:
                     cp = conformal_predictor
                     cp_score = cp.coverage_score(confidences, eval_outcomes)
-                    run_metrics[label].update({
-                        "cp_coverage_target": cp_score["target_coverage"],
-                        "cp_empirical_coverage": cp_score["empirical_coverage"],
-                        "cp_mean_width": cp_score["mean_width"],
-                        "cp_margin": round(cp.q_hat, 4) if cp.q_hat else None,
-                    })
+                    run_metrics[label].update(
+                        {
+                            "cp_coverage_target": cp_score["target_coverage"],
+                            "cp_empirical_coverage": cp_score["empirical_coverage"],
+                            "cp_mean_width": cp_score["mean_width"],
+                            "cp_margin": round(cp.q_hat, 4) if cp.q_hat else None,
+                        }
+                    )
 
                 # Reliability plot
                 plot_path = str(plots_dir / f"{label}_reliability.png")
                 self._reliability_plot(confidences, eval_outcomes, 10, plot_path)
-                print(f"  {label} — Brier: {brier:.4f} | ECE: {ece:.4f} | Acc: {acc:.4f}")
+                print(
+                    f"  {label} — Brier: {brier:.4f} | ECE: {ece:.4f} | Acc: {acc:.4f}"
+                )
                 if conformal_predictor:
-                    print(f"    CP: coverage={run_metrics[label].get('cp_empirical_coverage')} "
-                          f"target={cp_score['target_coverage']} "
-                          f"width={cp_score['mean_width']:.4f}")
+                    print(
+                        f"    CP: coverage={run_metrics[label].get('cp_empirical_coverage')} "
+                        f"target={cp_score['target_coverage']} "
+                        f"width={cp_score['mean_width']:.4f}"
+                    )
 
-                all_results.append({
-                    "mode": mode,
-                    "multi_sample": ms,
-                    "label": label,
-                    "metrics": run_metrics[label],
-                    "plot": plot_path,
-                })
+                all_results.append(
+                    {
+                        "mode": mode,
+                        "multi_sample": ms,
+                        "label": label,
+                        "metrics": run_metrics[label],
+                        "plot": plot_path,
+                    }
+                )
 
         t1 = time.time()
         report = BenchmarkReport(

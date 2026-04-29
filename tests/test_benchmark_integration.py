@@ -14,10 +14,7 @@ from __future__ import annotations
 
 import json
 import os
-import subprocess
-import sys
 import tempfile
-from pathlib import Path
 
 import pytest
 
@@ -72,12 +69,19 @@ class TestCLIBenchmarkCommand:
         """Run benchmark via CLI on a dummy dataset with monkeypatched pipeline."""
         # Monkeypatch Pipeline.run to return deterministic confidence without LLM calls
         from smf_swarm.pipeline import Pipeline, PipelineResult
-        from unittest.mock import Mock
 
         original_run = Pipeline.run
         call_count = 0
 
-        def mock_run(self, query, mode=None, domain=None, run_social=None, multi_sample=1, langgraph=None):
+        def mock_run(
+            self,
+            query,
+            mode=None,
+            domain=None,
+            run_social=None,
+            multi_sample=1,
+            langgraph=None,
+        ):
             nonlocal call_count
             call_count += 1
             return PipelineResult(
@@ -97,6 +101,7 @@ class TestCLIBenchmarkCommand:
         Pipeline.run = mock_run
         try:
             from smf_swarm.benchmarks.harness import BenchmarkHarness
+
             harness = BenchmarkHarness(llm_model="mock-model")
             report = harness.run(
                 dataset=dummy_jsonl,
@@ -118,21 +123,28 @@ class TestCLIBenchmarkCommand:
     def test_cli_benchmark_parses_args(self):
         """Verify CLI parser accepts benchmark subcommand."""
         from smf_swarm.cli import main
-        import sys
 
         # Parse known args without running
         try:
-            main([
-                "benchmark",
-                "--dataset", "dummy.jsonl",
-                "--modes", "standard,debate",
-                "--multi-samples", "1,5",
-                "--max-questions", "10",
-                "--output-dir", "/tmp/test",
-                "--hw-env",
-                "--llm-model", "gpt-4o",
-            ])
-        except SystemExit as e:
+            main(
+                [
+                    "benchmark",
+                    "--dataset",
+                    "dummy.jsonl",
+                    "--modes",
+                    "standard,debate",
+                    "--multi-samples",
+                    "1,5",
+                    "--max-questions",
+                    "10",
+                    "--output-dir",
+                    "/tmp/test",
+                    "--hw-env",
+                    "--llm-model",
+                    "gpt-4o",
+                ]
+            )
+        except SystemExit:
             # Dataset won't exist so it exits with error, but parser must accept all args
             pass
 
@@ -142,6 +154,7 @@ class TestFetchBenchmarkData:
 
     def test_dummy_dataset_generation(self):
         from scripts.fetch_benchmark_data import generate_dummy_dataset
+
         records = generate_dummy_dataset("test", 5)
         assert len(records) == 5
         assert records[0]["source"] == "dummy"
@@ -155,7 +168,10 @@ class TestLogHwEnv:
 
     def test_hw_env_output(self):
         import importlib.util
-        spec = importlib.util.spec_from_file_location("log_hw_env", "/home/mikesai2/smf-works/smf-swarm/scripts/log_hw_env.py")
+
+        spec = importlib.util.spec_from_file_location(
+            "log_hw_env", "/home/mikesai2/smf-works/smf-swarm/scripts/log_hw_env.py"
+        )
         mod = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(mod)
         data = mod.gather()

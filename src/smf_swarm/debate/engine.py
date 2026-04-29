@@ -22,7 +22,6 @@ from typing import TypedDict
 from langchain_core.messages import HumanMessage
 from langchain_openai import ChatOpenAI
 
-
 # ─── Prompts ────────────────────────────────────
 
 OPENING_BUDGET = 1500
@@ -49,9 +48,7 @@ ANALYST_PROMPT = (
     "Write a strongly argued opening or rebuttal. Be specific."
 )
 
-JUDGE_PROMPT = (
-    "You are a neutral judge with forecasting expertise."
-)
+JUDGE_PROMPT = "You are a neutral judge with forecasting expertise."
 
 JUDGE_WEIGHTING_INSTRUCTIONS = """
 BEFORE assigning a final confidence, complete these steps IN ORDER:
@@ -78,6 +75,7 @@ BEFORE assigning a final confidence, complete these steps IN ORDER:
 
 # ─── Typed state model ────────────────────────────
 
+
 class _RoleCards(TypedDict):
     name: str
     prompt: str
@@ -86,6 +84,7 @@ class _RoleCards(TypedDict):
 
 
 # ─── Engine ─────────────────────────────────────
+
 
 class DebateEngine:
     """Runs the 3-agent debate ensemble with bias-mitigation."""
@@ -173,11 +172,7 @@ class DebateEngine:
         for role in shuffled_roles:
             o = result.get(role["opening_key"], "")[:OPENING_BUDGET]
             r = result.get(role["rebuttal_key"], "")[:REBUTTAL_BUDGET]
-            position_blocks.append(
-                f"{role['name']}:\n"
-                f"{o}\n\n"
-                f"REBUTTAL:\n{r}\n"
-            )
+            position_blocks.append(f"{role['name']}:\n" f"{o}\n\n" f"REBUTTAL:\n{r}\n")
 
         ctx = (
             f"{JUDGE_PROMPT}\n\n"

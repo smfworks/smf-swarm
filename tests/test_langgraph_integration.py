@@ -24,7 +24,6 @@ from smf_swarm.pipeline_langgraph import (
     LANGGRAPH_AVAILABLE,
 )
 
-
 # ── Compilation ────────────────────────────────────────────────
 
 
@@ -133,6 +132,7 @@ def test_langgraph_produces_same_keys_as_classic():
 
         # ── Classic pipeline ──
         from smf_swarm.pipeline import Pipeline
+
         classic = Pipeline.__new__(Pipeline)
         classic.cfg = mp.cfg
         classic.llm = mock_llm
@@ -154,7 +154,9 @@ def test_langgraph_produces_same_keys_as_classic():
         classic._social = mp._social
         classic._reporter = mp._reporter
 
-        classic_result = classic._run_state_machine("Q", "debate", "general", run_social=False)
+        classic_result = classic._run_state_machine(
+            "Q", "debate", "general", run_social=False
+        )
         assert classic_result["status"] == "COMPLETED"
 
         # ── LangGraph pipeline ──

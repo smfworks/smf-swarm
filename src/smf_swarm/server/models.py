@@ -17,13 +17,21 @@ class HealthResponse(BaseModel):
 
 
 class PredictRequest(BaseModel):
-    query: str = Field(..., min_length=1, max_length=5000, description="Prediction question")
+    query: str = Field(
+        ..., min_length=1, max_length=5000, description="Prediction question"
+    )
     mode: Literal["standard", "debate", "full"] = "debate"
     domain: str = "general"
-    context_text: str = Field("", max_length=50000, description="Additional context text")
-    multi_sample: int = Field(1, ge=1, le=20, description="Number of temperature-swept runs")
+    context_text: str = Field(
+        "", max_length=50000, description="Additional context text"
+    )
+    multi_sample: int = Field(
+        1, ge=1, le=20, description="Number of temperature-swept runs"
+    )
     langgraph: bool = Field(False, description="Use LangGraph backend if installed")
-    output_confidence_interval: bool = Field(True, description="Include calibrated confidence interval in response")
+    output_confidence_interval: bool = Field(
+        True, description="Include calibrated confidence interval in response"
+    )
     conformal_alpha: float = Field(0.05, gt=0.0, lt=1.0)
 
     @field_validator("domain")
@@ -51,7 +59,9 @@ class BatchItem(BaseModel):
 
 
 class BatchRequest(BaseModel):
-    items: list[BatchItem] = Field(..., min_length=1, max_length=100, description="Up to 100 prediction items")
+    items: list[BatchItem] = Field(
+        ..., min_length=1, max_length=100, description="Up to 100 prediction items"
+    )
 
     @field_validator("items")
     @classmethod
@@ -104,15 +114,21 @@ class BenchmarkResponse(BaseModel):
 
 
 class CalibrationRequest(BaseModel):
-    predictions: list[dict] = Field(..., min_length=2, description="List of {confidence, outcome} records")
-    alpha: float = Field(0.05, gt=0.0, lt=1.0, description="Target miscoverage rate (default 0.05 = 95%)")
+    predictions: list[dict] = Field(
+        ..., min_length=2, description="List of {confidence, outcome} records"
+    )
+    alpha: float = Field(
+        0.05, gt=0.0, lt=1.0, description="Target miscoverage rate (default 0.05 = 95%)"
+    )
 
     @field_validator("predictions")
     @classmethod
     def _validate_predictions(cls, v):
         for i, p in enumerate(v):
             if "confidence" not in p or "outcome" not in p:
-                raise ValueError(f"Prediction {i} must have 'confidence' and 'outcome' keys")
+                raise ValueError(
+                    f"Prediction {i} must have 'confidence' and 'outcome' keys"
+                )
             if not (0.0 <= p["confidence"] <= 1.0):
                 raise ValueError(f"Prediction {i} confidence must be in [0,1]")
             if p["outcome"] not in (0, 1, True, False):

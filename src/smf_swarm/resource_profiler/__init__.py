@@ -44,6 +44,7 @@ __all__ = [
 
 # ── Convenience API ──────────────────────────────
 
+
 def run_profiler(
     auto: bool = False,
     force: bool = False,

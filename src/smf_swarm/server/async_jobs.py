@@ -27,14 +27,18 @@ async def event_stream(job_id: str) -> AsyncGenerator[str, None]:
     q: asyncio.Queue = asyncio.Queue()
 
     def consume():
-        import queue as q_std
+
         for raw in runner.event_stream(job_id):
             try:
                 if raw.startswith("event: "):
                     lines = raw.strip().split("\n")
                     ev_type = lines[0][7:]
                     data_line = lines[1] if len(lines) > 1 else ""
-                    payload = json.loads(data_line[6:]) if data_line.startswith("data: ") else {}
+                    payload = (
+                        json.loads(data_line[6:])
+                        if data_line.startswith("data: ")
+                        else {}
+                    )
                     payload["_event_type"] = ev_type
                 elif raw.startswith("data: "):
                     payload = json.loads(raw[6:])
@@ -46,6 +50,7 @@ async def event_stream(job_id: str) -> AsyncGenerator[str, None]:
         asyncio.run_coroutine_threadsafe(q.put(None), loop)
 
     import threading
+
     t = threading.Thread(target=consume, daemon=True)
     t.start()
 
