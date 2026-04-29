@@ -393,9 +393,10 @@ def _cmd_benchmark(args):
         # Determine dataset name from path
         name = os.path.splitext(os.path.basename(dataset_path))[0]
         subprocess.run([
-            sys.executable, "scripts/fetch_benchmark_data.py",
+            sys.executable,
+            os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "scripts", "fetch_benchmark_data.py"),
             "--datasets", name, "--limit", "500",
-        ], cwd=os.path.dirname(os.path.dirname(__file__)))
+        ])
 
     if not os.path.exists(dataset_path):
         print(f"❌ Dataset not found: {dataset_path}")
@@ -409,8 +410,10 @@ def _cmd_benchmark(args):
         hw_out = os.path.join(args.output_dir, "hw_env.json")
         print("Logging hardware environment...")
         subprocess.run([
-            sys.executable, "scripts/log_hw_env.py", "--outfile", hw_out,
-        ], cwd=os.path.dirname(os.path.dirname(__file__)))
+            sys.executable,
+            os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "scripts", "log_hw_env.py"),
+            "--outfile", hw_out,
+        ])
         print(f"  Saved to {hw_out}")
 
     # Parse modes and multi-samples
