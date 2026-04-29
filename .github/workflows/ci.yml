@@ -115,4 +115,12 @@ jobs:
       - name: Dry-run benchmark harness
         run: |
           python scripts/fetch_benchmark_data.py --dummy --limit 10
-          smf-swarm benchmark --dataset dummy --max-questions 3 --no-hw-env
+          # Skip actual benchmark run if no API key
+          if [ -z "${OPENAI_API_KEY:-}" ]; then
+            echo "No OPENAI_API_KEY — skipping live benchmark predictions"
+            echo "Benchmark dataset generated OK"
+          else
+            smf-swarm benchmark --dataset dummy --max-questions 3 --no-hw-env
+          fi
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}

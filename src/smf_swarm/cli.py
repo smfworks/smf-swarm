@@ -114,6 +114,7 @@ Examples:
     p_bench.add_argument("--max-questions", type=int, default=0, help="Cap number of questions (0 = all)")
     p_bench.add_argument("--fetch", action="store_true", help="Auto-fetch dataset if not found")
     p_bench.add_argument("--hw-env", action="store_true", help="Log hardware environment before running")
+    p_bench.add_argument("--no-hw-env", action="store_false", dest="hw_env", help="Skip hardware environment logging")
     p_bench.add_argument("--llm-model", default="", help="LLM model name for report metadata")
     p_bench.add_argument("--conformal", action="store_true", help="Enable conformal prediction (split calibration)")
     p_bench.add_argument("--conformal-alpha", type=float, default=0.05, help="Miscoverage rate for conformal prediction (default 0.05)")
