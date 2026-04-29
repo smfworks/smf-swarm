@@ -1,0 +1,118 @@
+# SPDX-License-Identifier: MIT
+# SMF Swarm — Continuous Integration
+# .github/workflows/ci.yml
+# Target branch: main
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint-security:
+    name: Lint & Security Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install black ruff mypy bandit pip-audit cyclonedx-bom
+          pip install -e ".[dev,api,benchmark]"
+
+      - name: black
+        run: black --check --diff src/ tests/
+
+      - name: ruff
+        run: ruff check src/ tests/
+
+      - name: mypy
+        run: mypy src/smf_swarm/ --ignore-missing-imports
+
+      - name: bandit
+        run: bandit -r src/ -f json -o bandit-report.json || true
+
+      - name: pip-audit
+        run: pip-audit --format=json --output=pip-audit-report.json || true
+
+      - name: SBOM
+        run: cyclonedx-py --format=json --output=sbom.json || true
+
+      - name: Upload security reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: security-reports
+          path: |
+            bandit-report.json
+            pip-audit-report.json
+            sbom.json
+
+  test-matrix:
+    name: Test (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -e ".[dev,api,benchmark]"
+
+      - name: Run tests
+        run: pytest tests/ -v --tb=short --cov=smf_swarm --cov-report=xml --cov-report=html
+
+      - name: Upload coverage
+        if: matrix.python-version == '3.12'
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: |
+            coverage.xml
+            htmlcov/
+
+  benchmark-dry:
+    name: Benchmark Dry Run
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -e ".[dev,benchmark]"
+
+      - name: Dry-run benchmark harness
+        run: |
+          python scripts/fetch_benchmark_data.py --dummy --limit 10
+          smf-swarm benchmark --dataset dummy --max-questions 3 --no-hw-env
