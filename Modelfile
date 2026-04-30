@@ -1,0 +1,28 @@
+# SMF Swarm — DeepSeek V4 Pro Cloud Modelfile
+# Optimized configuration for reliable code generation via Ollama CLI
+# Usage: ollama create smf-deepseek -f Modelfile
+
+FROM deepseek-v4-pro:cloud
+
+# Critical: default 2048 token limit truncates code output.
+# Coding tasks need 4096+ to emit complete functions with error handling.
+PARAMETER num_predict 4096
+
+# Temperature tuned from empirical testing:
+# - 0.3: deterministic but occasionally gets stuck in loops on bracket-heavy prompts
+# - 0.6: sweet spot — creative enough to avoid local minima, still focused
+# - 1.0: too verbose, loses structure
+PARAMETER temperature 0.6
+
+# Top-p controls nucleus sampling breadth. 0.9 balances diversity with coherence.
+PARAMETER top_p 0.9
+
+# Context window — keep default (DeepSeek V4 Pro supports 128k).
+# Only set if you need to constrain memory footprint:
+# PARAMETER num_ctx 32768
+
+# Stop sequences — let the model decide when to stop. DeepSeek's chat template
+# already handles this via the <｜end▁of▁sentence｜> special token.
+# Do NOT add manual stop sequences; they interfere with the remote endpoint.
+
+SYSTEM You are a senior software engineer. Write clean, idiomatic, production-ready code with comprehensive error handling, type hints, and docstrings. Prefer explicit over implicit. Validate all assumptions.

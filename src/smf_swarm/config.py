@@ -46,12 +46,13 @@ ENV_CONFIG_FILE = DEFAULT_CONFIG_DIR / ".env"
 @dataclass
 class LLMConfig:
     provider: str = "ollama"  # ollama | openai | anthropic | custom
-    model: str = "kimi-k2.6:cloud"  # any model name the provider supports
+    model: str = "deepseek-v4-pro:cloud"  # default Ollama cloud model
     base_url: str = "http://localhost:11434/v1"
     api_key: str = "ollama"
-    temperature: float = 0.3
+    temperature: float = 0.6  # tuned for DeepSeek V4 Pro coding performance
     timeout: int = 180
     max_retries: int = 1
+    max_tokens: int = 4096  # required for DeepSeek; hits 2048 default limit otherwise
     extra_headers: dict = field(default_factory=dict)
 
     def to_kwargs(self) -> dict:
@@ -63,6 +64,7 @@ class LLMConfig:
             "temperature": self.temperature,
             "timeout": self.timeout,
             "max_retries": self.max_retries,
+            "max_tokens": self.max_tokens,
         }
 
 
@@ -258,7 +260,7 @@ def configure() -> SwarmConfig:
 
     # ── Step 2: model name
     defaults = {
-        "ollama": "kimi-k2.6:cloud",
+        "ollama": "deepseek-v4-pro:cloud",
         "openai": "gpt-4o",
         "anthropic": "claude-3-opus-20240229",
         "custom": "model-name",
@@ -266,7 +268,8 @@ def configure() -> SwarmConfig:
     model_default = defaults[cfg.llm.provider]
     if cfg.llm.provider == "ollama":
         print("\nStep 2/5 — Model name")
-        print("  Popular options: llama3.3, qwen2.5, kimi-k2.6:cloud, mistral")
+        print("  Popular options: deepseek-v4-pro:cloud, llama3.3, qwen2.5, mistral")
+        print("  RECOMMENDED: deepseek-v4-pro:cloud — reliable coding outputs")
     else:
         print("\nStep 2/5 — Model name")
     model = input(f"Model [default: {model_default}]: ").strip() or model_default

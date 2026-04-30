@@ -205,12 +205,13 @@ smf_swarm/
 ```yaml
 llm:
   provider: ollama          # ollama | openai | anthropic | custom
-  model: kimi-k2.6:cloud
+  model: deepseek-v4-pro:cloud
   base_url: http://localhost:11434/v1
   api_key: ollama
-  temperature: 0.3
+  temperature: 0.6          # tuned for DeepSeek V4 Pro coding reliability
   timeout: 180
   max_retries: 1
+  max_tokens: 4096           # required — default 2048 truncates code output
 default_mode: debate
 default_domain: general
 social_agents: 15

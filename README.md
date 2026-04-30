@@ -276,7 +276,7 @@ Override config without re-running the wizard:
 
 | Variable | Purpose |
 |----------|---------|
-| `MODEL_NAME` | e.g., `kimi-k2.6:cloud`, `gpt-4o`, `llama3.3` |
+| `MODEL_NAME` | e.g., `deepseek-v4-pro:cloud`, `gpt-4o`, `llama3.3` |
 | `OPENAI_BASE_URL` | e.g., `http://localhost:11434/v1` |
 | `O_API_KEY` | API key (any string for Ollama, real key for cloud) |
 
