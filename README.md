@@ -1,3 +1,7 @@
+> ⚠️ **Status (2026-07-15):** This public **SMF Swarm v1** repo is in **maintenance / legacy** mode.  
+> **Active product development** is **[smf-swarm-2.0](https://github.com/smfworks/smf-swarm-2.0)** (private).  
+> Prefer Swarm 2.0 for new installs. This tree remains for open-source / CLI heritage.
+
 # SMF Swarm 🎯
 
 **Custom Sequential Hybrid Pipeline with Adversarial Debate and Social Calibration**
